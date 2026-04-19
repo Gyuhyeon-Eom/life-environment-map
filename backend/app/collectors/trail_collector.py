@@ -14,6 +14,13 @@ from ..config import settings
 # 한국관광공사 Tour API (산책로/둘레길 정보)
 TOUR_BASE_URL = "http://apis.data.go.kr/B551011/KorService2"
 
+# API v2 엔드포인트 매핑 (모두 뒤에 2가 붙음)
+EP_LOCATION = "locationBasedList2"
+EP_SEARCH = "searchKeyword2"
+EP_AREA = "areaBasedList2"
+EP_DETAIL = "detailCommon2"
+EP_DETAIL_INFO = "detailInfo2"
+
 
 async def search_trails(
     lat: float,
@@ -47,12 +54,14 @@ async def search_trails(
         "mapX": lng,
         "mapY": lat,
         "radius": radius,
-        "contentTypeId": "25",  # 25 = 여행코스
+        # contentTypeId: 12=관광지, 14=문화시설, 15=축제, 25=여행코스, 28=레포츠
+        # 산책로 관련은 25(여행코스) + 12(관광지)
+        "contentTypeId": "25",
     }
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.get(
-            f"{TOUR_BASE_URL}/locationBasedList1",
+            f"{TOUR_BASE_URL}/locationBasedList2",
             params=params,
         )
 
@@ -124,7 +133,7 @@ async def get_trail_detail(content_id: str) -> Optional[dict]:
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.get(
-            f"{TOUR_BASE_URL}/detailCommon1",
+            f"{TOUR_BASE_URL}/detailCommon2",
             params=params,
         )
         resp.raise_for_status()
@@ -165,7 +174,7 @@ async def get_trail_detail(content_id: str) -> Optional[dict]:
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.get(
-            f"{TOUR_BASE_URL}/detailInfo1",
+            f"{TOUR_BASE_URL}/detailInfo2",
             params=params,
         )
         resp.raise_for_status()
@@ -231,7 +240,7 @@ async def search_walking_trails(
     if area_code:
         params["areaCode"] = area_code
 
-    url = f"{TOUR_BASE_URL}/searchKeyword1" if keyword else f"{TOUR_BASE_URL}/areaBasedList1"
+    url = f"{TOUR_BASE_URL}/searchKeyword2" if keyword else f"{TOUR_BASE_URL}/areaBasedList2"
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.get(url, params=params)
