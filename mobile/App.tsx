@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import MapViewComponent from "./MapViewComponent";
 import TrailList from "./TrailList";
 import TrailDetail from "./TrailDetail";
+import BloomList from "./BloomList";
 
 // 탭 타입
 type TabType = "trail" | "bloom";
@@ -164,13 +165,12 @@ export default function App() {
           }}
         />
       ) : activeTab === "bloom" ? (
-        <View style={styles.comingSoon}>
-          <Text style={styles.comingSoonTitle}>벚꽃/단풍 예측</Text>
-          <Text style={styles.comingSoonText}>곧 출시 예정!</Text>
-          <Text style={styles.comingSoonSub}>
-            기온 데이터 기반 개화/단풍 예측 모델을 준비 중입니다
-          </Text>
-        </View>
+        <BloomList
+          onSelectSpot={(spot) => {
+            console.log("선택:", spot.name);
+            // TODO: 상세 화면 연결
+          }}
+        />
       ) : (
         <>
           <MapViewComponent location={location} weather={weather} />
