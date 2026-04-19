@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import weather, trails
+from .routers import weather, trails, bloom
 
 app = FastAPI(
     title="Life Environment Map API",
@@ -20,6 +20,7 @@ app.add_middleware(
 # 라우터 등록
 app.include_router(weather.router)
 app.include_router(trails.router)
+app.include_router(bloom.router)
 
 
 @app.get("/")
