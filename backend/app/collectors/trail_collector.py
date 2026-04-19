@@ -66,8 +66,13 @@ async def search_trails(
             query_parts.append(f"{k}={v}")
     url = f"{TOUR_BASE_URL}/locationBasedList2?{'&'.join(query_parts)}"
 
+    print(f"[DEBUG] Tour API URL: {url[:150]}...")
+
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.get(url)
+
+        print(f"[DEBUG] Tour API status: {resp.status_code}")
+        print(f"[DEBUG] Tour API response: {resp.text[:300]}")
 
         if resp.status_code != 200:
             print(f"Tour API error: {resp.status_code} - {resp.text[:200]}")
@@ -82,6 +87,8 @@ async def search_trails(
     # API 에러 응답 체크
     header = data.get("response", {}).get("header", {})
     result_code = header.get("resultCode", "")
+    print(f"[DEBUG] header: {header}, resultCode: '{result_code}'")
+
     if result_code not in ("0000", ""):
         print(f"Tour API result error: {header}")
         return {"items": [], "total_count": 0}
@@ -89,6 +96,7 @@ async def search_trails(
     body = data.get("response", {}).get("body", {})
     total = body.get("totalCount", 0)
     items_data = body.get("items", {})
+    print(f"[DEBUG] totalCount: {total}, items type: {type(items_data)}")
 
     if not items_data or items_data == "":
         return {"items": [], "total_count": 0}
