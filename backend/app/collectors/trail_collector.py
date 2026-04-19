@@ -49,13 +49,10 @@ async def search_trails(
         "MobileOS": "ETC",
         "MobileApp": "LifeEnvMap",
         "_type": "json",
-        "listYN": "Y",
         "arrange": "E",  # 거리순
         "mapX": lng,
         "mapY": lat,
         "radius": radius,
-        # contentTypeId: 12=관광지, 14=문화시설, 15=축제, 25=여행코스, 28=레포츠
-        # 산책로 관련은 25(여행코스) + 12(관광지)
         "contentTypeId": "25",
     }
 
@@ -84,19 +81,24 @@ async def search_trails(
             print(f"Tour API JSON parse error: {resp.text[:200]}")
             return {"items": [], "total_count": 0}
 
-    # API 에러 응답 체크
-    header = data.get("response", {}).get("header", {})
-    result_code = header.get("resultCode", "")
-    print(f"[DEBUG] header: {header}, resultCode: '{result_code}'")
+    # API 에러 응답 체크 (v2는 최상위에 resultCode가 올 수 있음)
+    result_code = data.get("resultCode", "")
+    if result_code and result_code != "0000":
+        # v2 에러 형식
+        print(f"Tour API v2 error: {data.get('resultCode')} - {data.get('resultMsg')}")
+        return {"items": [], "total_count": 0}
 
-    if result_code not in ("0000", ""):
+    # v1 형식 체크
+    header = data.get("response", {}).get("header", {})
+    header_code = header.get("resultCode", "")
+    if header_code and header_code not in ("0000",):
         print(f"Tour API result error: {header}")
         return {"items": [], "total_count": 0}
 
     body = data.get("response", {}).get("body", {})
     total = body.get("totalCount", 0)
     items_data = body.get("items", {})
-    print(f"[DEBUG] totalCount: {total}, items type: {type(items_data)}")
+    print(f"[DEBUG] totalCount: {total}, items: {str(items_data)[:100]}")
 
     if not items_data or items_data == "":
         return {"items": [], "total_count": 0}
