@@ -1,8 +1,16 @@
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import { StyleSheet, View, Text, TouchableOpacity, Platform } from "react-native";
 import * as Location from "expo-location";
 import { useEffect, useState } from "react";
+
+// 웹에서는 react-native-maps 사용 불가 → 조건부 import
+let MapView: any = View;
+let Marker: any = View;
+if (Platform.OS !== "web") {
+  const Maps = require("react-native-maps");
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+}
 
 // 탭 타입
 type TabType = "trail" | "noise" | "bloom";
@@ -157,27 +165,43 @@ export default function App() {
       </View>
 
       {/* 지도 */}
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: location.latitude,
-          longitude: location.longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }}
-        showsUserLocation={true}
-        showsMyLocationButton={true}
-      >
-        <Marker
-          coordinate={location}
-          title="현재 위치"
-          description={
-            weather
-              ? `${weather.temperature}°C, 습도 ${weather.humidity}%`
-              : "날씨 정보 로딩 중"
-          }
-        />
-      </MapView>
+      {Platform.OS === "web" ? (
+        <View style={[styles.map, styles.webMapPlaceholder]}>
+          <Text style={styles.webMapText}>
+            지도 (웹 미리보기)
+          </Text>
+          <Text style={styles.webMapCoord}>
+            위도: {location.latitude.toFixed(4)}, 경도: {location.longitude.toFixed(4)}
+          </Text>
+          {weather && (
+            <Text style={styles.webMapWeather}>
+              {weather.temperature}°C | 습도 {weather.humidity}% | 풍속 {weather.wind_speed}m/s
+            </Text>
+          )}
+        </View>
+      ) : (
+        <MapView
+          style={styles.map}
+          initialRegion={{
+            latitude: location.latitude,
+            longitude: location.longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          }}
+          showsUserLocation={true}
+          showsMyLocationButton={true}
+        >
+          <Marker
+            coordinate={location}
+            title="현재 위치"
+            description={
+              weather
+                ? `${weather.temperature}°C, 습도 ${weather.humidity}%`
+                : "날씨 정보 로딩 중"
+            }
+          />
+        </MapView>
+      )}
 
       {/* 하단 탭 바 */}
       <View style={styles.tabBar}>
@@ -278,6 +302,27 @@ const styles = StyleSheet.create({
   // 지도
   map: {
     flex: 1,
+  },
+  webMapPlaceholder: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#E8F5E9",
+  },
+  webMapText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#4CAF50",
+    marginBottom: 8,
+  },
+  webMapCoord: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 4,
+  },
+  webMapWeather: {
+    fontSize: 16,
+    color: "#333",
+    marginTop: 8,
   },
   // 하단 탭 바
   tabBar: {
