@@ -13,7 +13,7 @@ if (Platform.OS !== "web") {
 }
 
 // 탭 타입
-type TabType = "trail" | "noise" | "bloom";
+type TabType = "trail" | "bloom";
 
 // 날씨 데이터 타입
 type WeatherData = {
@@ -226,20 +226,6 @@ export default function App() {
             ]}
           >
             산책로
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "noise" && styles.activeTab]}
-          onPress={() => setActiveTab("noise")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "noise" && styles.activeTabText,
-            ]}
-          >
-            소음
           </Text>
         </TouchableOpacity>
 
