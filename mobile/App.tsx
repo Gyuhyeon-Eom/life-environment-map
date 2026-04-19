@@ -3,9 +3,14 @@ import { StyleSheet, View, Text, TouchableOpacity, Platform } from "react-native
 import * as Location from "expo-location";
 import { useEffect, useState } from "react";
 import MapViewComponent from "./MapViewComponent";
+import TrailList from "./TrailList";
+import TrailDetail from "./TrailDetail";
 
 // 탭 타입
 type TabType = "trail" | "bloom";
+
+// 뷰 타입
+type ViewType = "map" | "trail-list" | "trail-detail";
 
 // 날씨 데이터 타입
 type WeatherData = {
@@ -25,6 +30,8 @@ export default function App() {
     longitude: number;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("trail");
+  const [currentView, setCurrentView] = useState<ViewType>("map");
+  const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -84,11 +91,15 @@ export default function App() {
       case 1: return "비";
       case 2: return "비/눈";
       case 3: return "눈";
-      case 5: return "빗방울";
-      case 6: return "빗방울눈날림";
-      case 7: return "눈날림";
       default: return null;
     }
+  };
+
+  // 탭 변경 핸들러
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    setCurrentView("map");
+    setSelectedTrailId(null);
   };
 
   if (!location) {
@@ -98,6 +109,19 @@ export default function App() {
           {errorMsg || "위치를 불러오는 중..."}
         </Text>
       </View>
+    );
+  }
+
+  // 산책로 상세 화면
+  if (currentView === "trail-detail" && selectedTrailId) {
+    return (
+      <TrailDetail
+        contentId={selectedTrailId}
+        onBack={() => {
+          setCurrentView("trail-list");
+          setSelectedTrailId(null);
+        }}
+      />
     );
   }
 
@@ -129,14 +153,44 @@ export default function App() {
         )}
       </View>
 
-      {/* 지도 */}
-      <MapViewComponent location={location} weather={weather} />
+      {/* 메인 컨텐츠 영역 */}
+      {activeTab === "trail" && currentView === "trail-list" ? (
+        <TrailList
+          latitude={location.latitude}
+          longitude={location.longitude}
+          onSelectTrail={(trail) => {
+            setSelectedTrailId(trail.id);
+            setCurrentView("trail-detail");
+          }}
+        />
+      ) : activeTab === "bloom" ? (
+        <View style={styles.comingSoon}>
+          <Text style={styles.comingSoonTitle}>벚꽃/단풍 예측</Text>
+          <Text style={styles.comingSoonText}>곧 출시 예정!</Text>
+          <Text style={styles.comingSoonSub}>
+            기온 데이터 기반 개화/단풍 예측 모델을 준비 중입니다
+          </Text>
+        </View>
+      ) : (
+        <>
+          <MapViewComponent location={location} weather={weather} />
+          {/* 산책로 목록 보기 버튼 */}
+          {activeTab === "trail" && (
+            <TouchableOpacity
+              style={styles.listButton}
+              onPress={() => setCurrentView("trail-list")}
+            >
+              <Text style={styles.listButtonText}>주변 산책로 목록 보기</Text>
+            </TouchableOpacity>
+          )}
+        </>
+      )}
 
       {/* 하단 탭 바 */}
       <View style={styles.tabBar}>
         <TouchableOpacity
           style={[styles.tab, activeTab === "trail" && styles.activeTab]}
-          onPress={() => setActiveTab("trail")}
+          onPress={() => handleTabChange("trail")}
         >
           <Text
             style={[
@@ -150,7 +204,7 @@ export default function App() {
 
         <TouchableOpacity
           style={[styles.tab, activeTab === "bloom" && styles.activeTab]}
-          onPress={() => setActiveTab("bloom")}
+          onPress={() => handleTabChange("bloom")}
         >
           <Text
             style={[
@@ -213,6 +267,51 @@ const styles = StyleSheet.create({
     color: "#2196F3",
     fontWeight: "600",
   },
+  // 산책로 목록 보기 버튼
+  listButton: {
+    position: "absolute",
+    bottom: 100,
+    alignSelf: "center",
+    backgroundColor: "#4CAF50",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  listButtonText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  // 커밍순
+  comingSoon: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+    backgroundColor: "#FFF8E1",
+  },
+  comingSoonTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#F57F17",
+    marginBottom: 8,
+  },
+  comingSoonText: {
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 8,
+  },
+  comingSoonSub: {
+    fontSize: 13,
+    color: "#999",
+    textAlign: "center",
+  },
+  // 탭 바
   tabBar: {
     flexDirection: "row",
     backgroundColor: "#fff",
