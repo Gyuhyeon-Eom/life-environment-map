@@ -322,9 +322,9 @@ async def get_all_bloom_predictions() -> list[dict]:
         prediction = None
 
         if spot["type"] == "cherry":
-            # 벚꽃: 2월 1일부터 현재까지 기온 데이터
+            # 벚꽃: 2월 1일부터 어제까지 기온 데이터 (ASOS는 전날까지만 제공)
             start = f"{now.year}0201"
-            end = now.strftime("%Y%m%d")
+            end = (now - timedelta(days=1)).strftime("%Y%m%d")
 
             temps = await get_daily_temperatures(
                 spot["station_id"], start, end
@@ -336,9 +336,9 @@ async def get_all_bloom_predictions() -> list[dict]:
                 )
 
         elif spot["type"] == "autumn":
-            # 단풍: 9월 1일부터 현재까지
+            # 단풍: 9월 1일부터 어제까지
             start = f"{now.year}0901"
-            end = now.strftime("%Y%m%d")
+            end = (now - timedelta(days=1)).strftime("%Y%m%d")
 
             temps = await get_daily_temperatures(
                 spot["station_id"], start, end
@@ -382,7 +382,7 @@ async def get_bloom_spot_detail(spot_id: str) -> Optional[dict]:
 
     if spot["type"] == "cherry":
         start = f"{now.year}0201"
-        end = now.strftime("%Y%m%d")
+        end = (now - timedelta(days=1)).strftime("%Y%m%d")
         temps = await get_daily_temperatures(spot["station_id"], start, end)
 
         result = {
@@ -419,7 +419,7 @@ async def get_bloom_spot_detail(spot_id: str) -> Optional[dict]:
 
     elif spot["type"] == "autumn":
         start = f"{now.year}0901"
-        end = now.strftime("%Y%m%d")
+        end = (now - timedelta(days=1)).strftime("%Y%m%d")
         temps = await get_daily_temperatures(spot["station_id"], start, end)
 
         result = {
