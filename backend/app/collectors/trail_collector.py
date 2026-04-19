@@ -12,7 +12,7 @@ from ..config import settings
 
 
 # 한국관광공사 Tour API (산책로/둘레길 정보)
-TOUR_BASE_URL = "http://apis.data.go.kr/B551011/KorService1"
+TOUR_BASE_URL = "http://apis.data.go.kr/B551011/KorService2"
 
 
 async def search_trails(
