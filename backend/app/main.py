@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .routers import weather
+
 app = FastAPI(
     title="Life Environment Map API",
     description="산책로 혼잡도, 소음, 공기질, 벚꽃/단풍 예측 API",
@@ -14,6 +16,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 라우터 등록
+app.include_router(weather.router)
 
 
 @app.get("/")
