@@ -59,21 +59,30 @@ async def search_trails(
         "contentTypeId": "25",
     }
 
+    # serviceKey는 이미 인코딩된 상태이므로 직접 URL에 붙여야 함
+    query_parts = [f"serviceKey={settings.DATA_GO_KR_API_KEY}"]
+    for k, v in params.items():
+        if k != "serviceKey":
+            query_parts.append(f"{k}={v}")
+    url = f"{TOUR_BASE_URL}/locationBasedList2?{'&'.join(query_parts)}"
+
     async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.get(
-            f"{TOUR_BASE_URL}/locationBasedList2",
-            params=params,
-        )
+        resp = await client.get(url)
 
         if resp.status_code != 200:
             print(f"Tour API error: {resp.status_code} - {resp.text[:200]}")
             return {"items": [], "total_count": 0}
 
-        data = resp.json()
+        try:
+            data = resp.json()
+        except Exception:
+            print(f"Tour API JSON parse error: {resp.text[:200]}")
+            return {"items": [], "total_count": 0}
 
     # API 에러 응답 체크
     header = data.get("response", {}).get("header", {})
-    if header.get("resultCode") != "0000":
+    result_code = header.get("resultCode", "")
+    if result_code not in ("0000", ""):
         print(f"Tour API result error: {header}")
         return {"items": [], "total_count": 0}
 
