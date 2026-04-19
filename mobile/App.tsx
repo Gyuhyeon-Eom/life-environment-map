@@ -8,19 +8,18 @@ import {
   ScrollView,
   Image,
   Dimensions,
-  Animated,
 } from "react-native";
 import * as Location from "expo-location";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import MapViewComponent from "./MapViewComponent";
 import TrailList from "./TrailList";
 import TrailDetail from "./TrailDetail";
 import BloomList from "./BloomList";
 import { colors, radius } from "./theme";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 
-type TabType = "home" | "trail" | "bloom";
+type TabType = "home" | "trail" | "bloom" | "photo" | "friends";
 type ViewType = "main" | "trail-list" | "trail-detail";
 
 type WeatherData = {
@@ -32,7 +31,6 @@ type WeatherData = {
 
 const API_BASE = "http://127.0.0.1:9090";
 
-// 더미 커뮤니티 데이터 (지도 핀용)
 const COMMUNITY_POSTS = [
   {
     id: "1",
@@ -90,7 +88,6 @@ export default function App() {
   const [currentView, setCurrentView] = useState<ViewType>("main");
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [showBottomSheet, setShowBottomSheet] = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -164,10 +161,9 @@ export default function App() {
     <View style={styles.container}>
       <StatusBar style="dark" />
 
-      {/* ===== 홈: 지도 + 커뮤니티 바텀시트 ===== */}
+      {/* ===== 홈 ===== */}
       {activeTab === "home" && (
         <View style={styles.homeContainer}>
-          {/* 상단 오버레이 헤더 */}
           <View style={styles.mapHeader}>
             <Text style={styles.logo}>걸어볼까</Text>
             {weather && (
@@ -183,15 +179,13 @@ export default function App() {
             )}
           </View>
 
-          {/* 지도 */}
           <MapViewComponent location={location} weather={weather} />
 
-          {/* 바텀 시트 - 커뮤니티 카드 */}
           <View style={styles.bottomSheet}>
             <View style={styles.bottomSheetHandle} />
             <View style={styles.bottomSheetHeader}>
               <Text style={styles.bottomSheetTitle}>친구들의 산책</Text>
-              <TouchableOpacity>
+              <TouchableOpacity style={styles.seeAllBtn}>
                 <Text style={styles.seeAllText}>전체보기</Text>
               </TouchableOpacity>
             </View>
@@ -202,10 +196,9 @@ export default function App() {
               contentContainerStyle={styles.cardScroll}
             >
               {COMMUNITY_POSTS.map((post) => (
-                <TouchableOpacity key={post.id} style={styles.communityCard} activeOpacity={0.9}>
+                <TouchableOpacity key={post.id} style={styles.communityCard} activeOpacity={0.85}>
                   <Image source={{ uri: post.image }} style={styles.communityImage} />
                   <View style={styles.communityOverlay}>
-                    {/* 대기질 뱃지 */}
                     <View style={[styles.airBadge, { backgroundColor: getAirColor(post.airQuality) }]}>
                       <Text style={styles.airBadgeText}>{post.airQuality}</Text>
                     </View>
@@ -226,30 +219,32 @@ export default function App() {
               ))}
             </ScrollView>
 
-            {/* 빠른 액션 */}
             <View style={styles.quickActions}>
               <TouchableOpacity
                 style={styles.actionBtn}
-                onPress={() => {
-                  setActiveTab("trail");
-                  setCurrentView("trail-list");
-                }}
+                onPress={() => handleTabChange("trail")}
               >
                 <Image source={require("./assets/icons/trail.jpg")} style={styles.actionIcon} />
                 <Text style={styles.actionLabel}>산책로</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.actionBtn}
-                onPress={() => setActiveTab("bloom")}
+                onPress={() => handleTabChange("bloom")}
               >
                 <Image source={require("./assets/icons/bloom.jpg")} style={styles.actionIcon} />
                 <Text style={styles.actionLabel}>개화현황</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn}>
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={() => handleTabChange("photo")}
+              >
                 <Image source={require("./assets/icons/camera.jpg")} style={styles.actionIcon} />
                 <Text style={styles.actionLabel}>사진공유</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn}>
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={() => handleTabChange("friends")}
+              >
                 <Image source={require("./assets/icons/friends.jpg")} style={styles.actionIcon} />
                 <Text style={styles.actionLabel}>친구</Text>
               </TouchableOpacity>
@@ -258,15 +253,15 @@ export default function App() {
         </View>
       )}
 
-      {/* ===== 산책로 탭 ===== */}
+      {/* ===== 산책로 ===== */}
       {activeTab === "trail" && (
         <>
           <View style={styles.subHeader}>
-            <TouchableOpacity onPress={() => handleTabChange("home")}>
-              <Text style={styles.subHeaderBack}>←</Text>
+            <TouchableOpacity onPress={() => handleTabChange("home")} style={styles.headerBackBtn}>
+              <Text style={styles.headerBackText}>←</Text>
             </TouchableOpacity>
             <Text style={styles.subHeaderTitle}>산책로</Text>
-            <View style={{ width: 40 }} />
+            <View style={{ width: 44 }} />
           </View>
           <TrailList
             latitude={location.latitude}
@@ -279,17 +274,99 @@ export default function App() {
         </>
       )}
 
-      {/* ===== 개화 탭 ===== */}
+      {/* ===== 개화 ===== */}
       {activeTab === "bloom" && (
         <>
           <View style={styles.subHeader}>
-            <TouchableOpacity onPress={() => handleTabChange("home")}>
-              <Text style={styles.subHeaderBack}>←</Text>
+            <TouchableOpacity onPress={() => handleTabChange("home")} style={styles.headerBackBtn}>
+              <Text style={styles.headerBackText}>←</Text>
             </TouchableOpacity>
             <Text style={styles.subHeaderTitle}>개화 현황</Text>
-            <View style={{ width: 40 }} />
+            <View style={{ width: 44 }} />
           </View>
           <BloomList onSelectSpot={(spot) => console.log(spot.name)} />
+        </>
+      )}
+
+      {/* ===== 사진공유 (준비중) ===== */}
+      {activeTab === "photo" && (
+        <>
+          <View style={styles.subHeader}>
+            <TouchableOpacity onPress={() => handleTabChange("home")} style={styles.headerBackBtn}>
+              <Text style={styles.headerBackText}>←</Text>
+            </TouchableOpacity>
+            <Text style={styles.subHeaderTitle}>사진 공유</Text>
+            <View style={{ width: 44 }} />
+          </View>
+          <View style={styles.comingSoonContainer}>
+            <Image source={require("./assets/icons/camera.jpg")} style={styles.comingSoonIcon} />
+            <Text style={styles.comingSoonTitle}>사진 공유</Text>
+            <Text style={styles.comingSoonText}>
+              산책하면서 찍은 사진을 장소와 함께 공유하세요
+            </Text>
+            <View style={styles.comingSoonFeatures}>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureDot}>+</Text>
+                <Text style={styles.featureText}>사진 촬영 또는 갤러리에서 선택</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureDot}>+</Text>
+                <Text style={styles.featureText}>장소 태그 자동 추가</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureDot}>+</Text>
+                <Text style={styles.featureText}>해시태그로 분류</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureDot}>+</Text>
+                <Text style={styles.featureText}>친구 지도에 사진 핀 표시</Text>
+              </View>
+            </View>
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonBadgeText}>곧 출시 예정</Text>
+            </View>
+          </View>
+        </>
+      )}
+
+      {/* ===== 친구 (준비중) ===== */}
+      {activeTab === "friends" && (
+        <>
+          <View style={styles.subHeader}>
+            <TouchableOpacity onPress={() => handleTabChange("home")} style={styles.headerBackBtn}>
+              <Text style={styles.headerBackText}>←</Text>
+            </TouchableOpacity>
+            <Text style={styles.subHeaderTitle}>친구</Text>
+            <View style={{ width: 44 }} />
+          </View>
+          <View style={styles.comingSoonContainer}>
+            <Image source={require("./assets/icons/friends.jpg")} style={styles.comingSoonIcon} />
+            <Text style={styles.comingSoonTitle}>친구</Text>
+            <Text style={styles.comingSoonText}>
+              친구와 산책을 공유하고 서로의 발자취를 확인하세요
+            </Text>
+            <View style={styles.comingSoonFeatures}>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureDot}>+</Text>
+                <Text style={styles.featureText}>친구 검색 및 추가</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureDot}>+</Text>
+                <Text style={styles.featureText}>친구의 산책 사진 지도에서 보기</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureDot}>+</Text>
+                <Text style={styles.featureText}>산책 코스 추천해주기</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <Text style={styles.featureDot}>+</Text>
+                <Text style={styles.featureText}>함께 걷기 약속</Text>
+              </View>
+            </View>
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonBadgeText}>곧 출시 예정</Text>
+            </View>
+          </View>
         </>
       )}
     </View>
@@ -328,7 +405,6 @@ const styles = StyleSheet.create({
   homeContainer: {
     flex: 1,
   },
-  // 지도 위 헤더
   mapHeader: {
     position: "absolute",
     top: 0,
@@ -353,12 +429,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.white,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: 6,
+    gap: 8,
   },
   weatherChipTemp: {
     fontSize: 15,
@@ -381,8 +457,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
     paddingTop: 8,
     paddingBottom: 34,
     shadowColor: "#000",
@@ -397,33 +473,39 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: colors.border,
     alignSelf: "center",
-    marginBottom: 12,
+    marginBottom: 14,
   },
   bottomSheetHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   bottomSheetTitle: {
     fontSize: 17,
     fontWeight: "700",
     color: colors.text,
   },
+  seeAllBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryBg,
+  },
   seeAllText: {
     fontSize: 13,
     color: colors.primary,
     fontWeight: "600",
   },
-  // 커뮤니티 카드 (가로 스크롤)
+  // 커뮤니티 카드
   cardScroll: {
     paddingHorizontal: 16,
     gap: 12,
   },
   communityCard: {
     width: width * 0.42,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     overflow: "hidden",
     backgroundColor: colors.white,
     borderWidth: 1,
@@ -432,6 +514,8 @@ const styles = StyleSheet.create({
   communityImage: {
     width: "100%",
     height: width * 0.42,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
   },
   communityOverlay: {
     position: "absolute",
@@ -439,9 +523,9 @@ const styles = StyleSheet.create({
     right: 8,
   },
   airBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.full,
   },
   airBadgeText: {
     fontSize: 10,
@@ -449,7 +533,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   communityInfo: {
-    padding: 10,
+    padding: 12,
   },
   communityLocation: {
     fontSize: 14,
@@ -472,7 +556,7 @@ const styles = StyleSheet.create({
   },
   communityTags: {
     flexDirection: "row",
-    gap: 4,
+    gap: 6,
   },
   communityTag: {
     fontSize: 11,
@@ -487,16 +571,16 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 0.5,
     borderTopColor: colors.border,
-    marginTop: 14,
+    marginTop: 16,
   },
   actionBtn: {
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   actionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
   },
   actionLabel: {
     fontSize: 11,
@@ -508,22 +592,92 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingTop: 54,
-    paddingBottom: 12,
+    paddingBottom: 14,
     paddingHorizontal: 16,
     backgroundColor: colors.white,
     borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
   },
-  subHeaderBack: {
-    fontSize: 24,
+  headerBackBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.bg,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerBackText: {
+    fontSize: 20,
     color: colors.text,
-    width: 40,
+    fontWeight: "600",
   },
   subHeaderTitle: {
     flex: 1,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "700",
     color: colors.text,
     textAlign: "center",
+  },
+  // 커밍순
+  comingSoonContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+    backgroundColor: colors.bg,
+  },
+  comingSoonIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    marginBottom: 20,
+  },
+  comingSoonTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: colors.text,
+    marginBottom: 8,
+  },
+  comingSoonText: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+  comingSoonFeatures: {
+    alignSelf: "stretch",
+    backgroundColor: colors.white,
+    borderRadius: radius.lg,
+    padding: 20,
+    gap: 14,
+    marginBottom: 24,
+  },
+  featureItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  featureDot: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.primary,
+    width: 24,
+    textAlign: "center",
+  },
+  featureText: {
+    fontSize: 14,
+    color: colors.text,
+  },
+  comingSoonBadge: {
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: radius.full,
+  },
+  comingSoonBadgeText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.primary,
   },
 });
