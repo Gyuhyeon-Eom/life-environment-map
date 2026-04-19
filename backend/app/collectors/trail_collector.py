@@ -83,7 +83,6 @@ async def get_trail_detail(content_id: str) -> Optional[dict]:
         "MobileApp": "LifeEnvMap",
         "_type": "json",
         "contentId": content_id,
-        "contentTypeId": "25",
         "defaultYN": "Y",
         "firstImageYN": "Y",
         "overviewYN": "Y",
@@ -122,7 +121,6 @@ async def get_trail_detail(content_id: str) -> Optional[dict]:
         "MobileApp": "LifeEnvMap",
         "_type": "json",
         "contentId": content_id,
-        "contentTypeId": "25",
     }
 
     course_data = await _api_call("detailInfo2", course_params)
