@@ -235,22 +235,22 @@ export default function App() {
                   setCurrentView("trail-list");
                 }}
               >
-                <Text style={styles.actionEmoji}>🥾</Text>
+                <Image source={require("./assets/icons/trail.jpg")} style={styles.actionIcon} />
                 <Text style={styles.actionLabel}>산책로</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.actionBtn}
                 onPress={() => setActiveTab("bloom")}
               >
-                <Text style={styles.actionEmoji}>🌸</Text>
+                <Image source={require("./assets/icons/bloom.jpg")} style={styles.actionIcon} />
                 <Text style={styles.actionLabel}>개화현황</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionBtn}>
-                <Text style={styles.actionEmoji}>📸</Text>
+                <Image source={require("./assets/icons/camera.jpg")} style={styles.actionIcon} />
                 <Text style={styles.actionLabel}>사진공유</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionBtn}>
-                <Text style={styles.actionEmoji}>👥</Text>
+                <Image source={require("./assets/icons/friends.jpg")} style={styles.actionIcon} />
                 <Text style={styles.actionLabel}>친구</Text>
               </TouchableOpacity>
             </View>
@@ -493,8 +493,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
-  actionEmoji: {
-    fontSize: 24,
+  actionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
   },
   actionLabel: {
     fontSize: 11,
