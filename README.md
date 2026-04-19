@@ -117,10 +117,14 @@ npx expo start
 | 한국관광공사 관광정보_GW | https://www.data.go.kr/data/15101578/openapi.do | 산책로 |
 | 기상청 ASOS 일기온 | https://www.data.go.kr/data/15059093/openapi.do | 벚꽃 예측 |
 
+## 현재 상태: v0.1.0
+
+상세 변경 내역: [CHANGELOG.md](./CHANGELOG.md)
+
 ## 로드맵
 
-- [x] Phase 1: 기반 세팅 + API 연동
-- [ ] Phase 2: 지도 중심 UI 완성
+- [x] Phase 1: 기반 세팅 + API 연동 (v0.1.0)
+- [ ] Phase 2: 지도 중심 UI 완성 + 데이터소스 확장
 - [ ] Phase 3: 커뮤니티 (사진 공유, 친구)
 - [ ] Phase 4: 벚꽃/단풍 예측 모델 고도화
 - [ ] Phase 5: 앱스토어 출시
