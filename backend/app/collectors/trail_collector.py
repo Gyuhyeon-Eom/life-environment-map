@@ -3,39 +3,18 @@
 - 한국관광공사 Tour API (KorService2)
 """
 
-import httpx
-from urllib.parse import urlencode
 from typing import Optional
-from ..config import settings
+from ..utils import api_get
 
 
 TOUR_BASE_URL = "http://apis.data.go.kr/B551011/KorService2"
 
 
-def _build_url(endpoint: str, params: dict) -> str:
-    """serviceKey 이중 인코딩 방지를 위해 URL 직접 조합"""
-    base = f"{TOUR_BASE_URL}/{endpoint}?serviceKey={settings.DATA_GO_KR_API_KEY}"
-    if params:
-        base += "&" + "&".join(f"{k}={v}" for k, v in params.items())
-    return base
-
-
 async def _api_call(endpoint: str, params: dict) -> Optional[dict]:
-    """공통 API 호출"""
-    url = _build_url(endpoint, params)
-
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.get(url)
-
-        if resp.status_code != 200:
-            print(f"Tour API error: {resp.status_code}")
-            return None
-
-        try:
-            data = resp.json()
-        except Exception:
-            print(f"Tour API JSON error: {resp.text[:200]}")
-            return None
+    """Tour API 호출 (공통 utils 사용)"""
+    data = await api_get(TOUR_BASE_URL, endpoint, params)
+    if not data:
+        return None
 
     # v2 에러 체크
     if data.get("resultCode") and data["resultCode"] != "0000":
