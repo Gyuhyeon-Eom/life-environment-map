@@ -2,15 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import { StyleSheet, View, Text, TouchableOpacity, Platform } from "react-native";
 import * as Location from "expo-location";
 import { useEffect, useState } from "react";
-
-// 웹에서는 react-native-maps 사용 불가 → 조건부 import
-let MapView: any = View;
-let Marker: any = View;
-if (Platform.OS !== "web") {
-  const Maps = require("react-native-maps");
-  MapView = Maps.default;
-  Marker = Maps.Marker;
-}
+import MapViewComponent from "./MapViewComponent";
 
 // 탭 타입
 type TabType = "trail" | "bloom";
@@ -24,19 +16,8 @@ type WeatherData = {
   rain_type?: number;
 };
 
-// 대기질 데이터 타입
-type AirQualityData = {
-  pm10?: number | null;
-  pm25?: number | null;
-  pm10_grade?: string;
-  pm25_grade?: string;
-  khai_grade?: string;
-};
-
-// 백엔드 API URL (개발 시 본인 PC IP로 변경)
-const API_BASE = "http://10.0.2.2:9090"; // Android 에뮬레이터용
-// const API_BASE = "http://localhost:9090"; // iOS 시뮬레이터용
-// const API_BASE = "http://192.168.x.x:9090"; // 실기기 테스트 시 PC의 로컬 IP
+// 백엔드 API URL
+const API_BASE = "http://127.0.0.1:9090";
 
 export default function App() {
   const [location, setLocation] = useState<{
@@ -45,14 +26,12 @@ export default function App() {
   } | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("trail");
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [airQuality, setAirQuality] = useState<AirQualityData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // 위치 권한 요청 + 현재 위치 가져오기
   useEffect(() => {
     (async () => {
       try {
-        // 웹에서는 바로 기본 좌표 사용
         if (Platform.OS === "web") {
           setLocation({ latitude: 37.5665, longitude: 126.978 });
           return;
@@ -98,41 +77,17 @@ export default function App() {
     fetchWeather();
   }, [location]);
 
-  // 미세먼지 등급별 색상
-  const getAirQualityColor = (grade?: string) => {
-    switch (grade) {
-      case "좋음":
-        return "#4CAF50";
-      case "보통":
-        return "#2196F3";
-      case "나쁨":
-        return "#FF9800";
-      case "매우나쁨":
-        return "#F44336";
-      default:
-        return "#9E9E9E";
-    }
-  };
-
   // 강수 형태 텍스트
   const getRainTypeText = (type?: number) => {
     switch (type) {
-      case 0:
-        return null;
-      case 1:
-        return "비";
-      case 2:
-        return "비/눈";
-      case 3:
-        return "눈";
-      case 5:
-        return "빗방울";
-      case 6:
-        return "빗방울눈날림";
-      case 7:
-        return "눈날림";
-      default:
-        return null;
+      case 0: return null;
+      case 1: return "비";
+      case 2: return "비/눈";
+      case 3: return "눈";
+      case 5: return "빗방울";
+      case 6: return "빗방울눈날림";
+      case 7: return "눈날림";
+      default: return null;
     }
   };
 
@@ -175,43 +130,7 @@ export default function App() {
       </View>
 
       {/* 지도 */}
-      {Platform.OS === "web" ? (
-        <View style={[styles.map, styles.webMapPlaceholder]}>
-          <Text style={styles.webMapText}>
-            지도 (웹 미리보기)
-          </Text>
-          <Text style={styles.webMapCoord}>
-            위도: {location.latitude.toFixed(4)}, 경도: {location.longitude.toFixed(4)}
-          </Text>
-          {weather && (
-            <Text style={styles.webMapWeather}>
-              {weather.temperature}°C | 습도 {weather.humidity}% | 풍속 {weather.wind_speed}m/s
-            </Text>
-          )}
-        </View>
-      ) : (
-        <MapView
-          style={styles.map}
-          initialRegion={{
-            latitude: location.latitude,
-            longitude: location.longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          }}
-          showsUserLocation={true}
-          showsMyLocationButton={true}
-        >
-          <Marker
-            coordinate={location}
-            title="현재 위치"
-            description={
-              weather
-                ? `${weather.temperature}°C, 습도 ${weather.humidity}%`
-                : "날씨 정보 로딩 중"
-            }
-          />
-        </MapView>
-      )}
+      <MapViewComponent location={location} weather={weather} />
 
       {/* 하단 탭 바 */}
       <View style={styles.tabBar}>
@@ -262,10 +181,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
   },
-  // 상단 날씨 바
   weatherBar: {
     backgroundColor: "#fff",
-    paddingTop: 50, // 상태바 높이
+    paddingTop: 50,
     paddingBottom: 12,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
@@ -295,38 +213,12 @@ const styles = StyleSheet.create({
     color: "#2196F3",
     fontWeight: "600",
   },
-  // 지도
-  map: {
-    flex: 1,
-  },
-  webMapPlaceholder: {
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#E8F5E9",
-  },
-  webMapText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#4CAF50",
-    marginBottom: 8,
-  },
-  webMapCoord: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 4,
-  },
-  webMapWeather: {
-    fontSize: 16,
-    color: "#333",
-    marginTop: 8,
-  },
-  // 하단 탭 바
   tabBar: {
     flexDirection: "row",
     backgroundColor: "#fff",
     borderTopWidth: 1,
     borderTopColor: "#eee",
-    paddingBottom: 30, // 하단 안전 영역
+    paddingBottom: 30,
     elevation: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
