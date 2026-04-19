@@ -13,10 +13,9 @@
 - 일최저기온 5°C 이하 누적일수 기반
 """
 
-import httpx
 from datetime import datetime, timedelta
 from typing import Optional
-from ..config import settings
+from ..utils import api_get
 
 
 # 기상청 중기예보 + 과거 관측 API
@@ -135,7 +134,6 @@ async def get_daily_temperatures(
         list[dict]: [{date, avg_temp, min_temp, max_temp}, ...]
     """
     params = {
-        "serviceKey": settings.DATA_GO_KR_API_KEY,
         "numOfRows": "365",
         "pageNo": "1",
         "dataType": "JSON",
@@ -146,20 +144,12 @@ async def get_daily_temperatures(
         "stnIds": station_id,
     }
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.get(
-            f"{WEATHER_OBS_URL}/getWthrDataList",
-            params=params,
-        )
-
-        if resp.status_code != 200:
-            print(f"ASOS API error: {resp.status_code}")
-            return None
-
-        data = resp.json()
+    data = await api_get(WEATHER_OBS_URL, "getWthrDataList", params)
+    if not data:
+        return None
 
     header = data.get("response", {}).get("header", {})
-    if header.get("resultCode") != "00":
+    if header.get("resultCode") not in ("00", "0000"):
         print(f"ASOS API result error: {header}")
         return None
 
