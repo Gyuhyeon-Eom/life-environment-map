@@ -86,7 +86,6 @@ async def get_trail_detail(content_id: str) -> Optional[dict]:
         "contentTypeId": "25",
         "defaultYN": "Y",
         "firstImageYN": "Y",
-        "areacodeYN": "Y",
         "overviewYN": "Y",
     }
 
