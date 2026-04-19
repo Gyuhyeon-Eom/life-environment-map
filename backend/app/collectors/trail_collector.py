@@ -55,8 +55,18 @@ async def search_trails(
             f"{TOUR_BASE_URL}/locationBasedList1",
             params=params,
         )
-        resp.raise_for_status()
+
+        if resp.status_code != 200:
+            print(f"Tour API error: {resp.status_code} - {resp.text[:200]}")
+            return {"items": [], "total_count": 0}
+
         data = resp.json()
+
+    # API 에러 응답 체크
+    header = data.get("response", {}).get("header", {})
+    if header.get("resultCode") != "0000":
+        print(f"Tour API result error: {header}")
+        return {"items": [], "total_count": 0}
 
     body = data.get("response", {}).get("body", {})
     total = body.get("totalCount", 0)
