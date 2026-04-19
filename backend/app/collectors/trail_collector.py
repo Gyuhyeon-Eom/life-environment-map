@@ -1,25 +1,48 @@
 """
 산책로/등산로 데이터 수집
-- 전국길관광정보 표준데이터 (공공데이터포털)
-- 국토교통부 등산로 API
-
-API 문서: https://www.data.go.kr/data/15017321/standard.do
+- 한국관광공사 Tour API (KorService2)
 """
 
 import httpx
+from urllib.parse import urlencode
 from typing import Optional
 from ..config import settings
 
 
-# 한국관광공사 Tour API (산책로/둘레길 정보)
 TOUR_BASE_URL = "http://apis.data.go.kr/B551011/KorService2"
 
-# API v2 엔드포인트 매핑 (모두 뒤에 2가 붙음)
-EP_LOCATION = "locationBasedList2"
-EP_SEARCH = "searchKeyword2"
-EP_AREA = "areaBasedList2"
-EP_DETAIL = "detailCommon2"
-EP_DETAIL_INFO = "detailInfo2"
+
+def _build_url(endpoint: str, params: dict) -> str:
+    """serviceKey 이중 인코딩 방지를 위해 URL 직접 조합"""
+    base = f"{TOUR_BASE_URL}/{endpoint}?serviceKey={settings.DATA_GO_KR_API_KEY}"
+    if params:
+        base += "&" + "&".join(f"{k}={v}" for k, v in params.items())
+    return base
+
+
+async def _api_call(endpoint: str, params: dict) -> Optional[dict]:
+    """공통 API 호출"""
+    url = _build_url(endpoint, params)
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.get(url)
+
+        if resp.status_code != 200:
+            print(f"Tour API error: {resp.status_code}")
+            return None
+
+        try:
+            data = resp.json()
+        except Exception:
+            print(f"Tour API JSON error: {resp.text[:200]}")
+            return None
+
+    # v2 에러 체크
+    if data.get("resultCode") and data["resultCode"] != "0000":
+        print(f"Tour API v2 error: {data.get('resultMsg')}")
+        return None
+
+    return data
 
 
 async def search_trails(
@@ -29,76 +52,27 @@ async def search_trails(
     page: int = 1,
     size: int = 20,
 ) -> Optional[dict]:
-    """
-    위치 기반 산책로/관광코스 검색
-
-    Args:
-        lat: 위도
-        lng: 경도
-        radius: 검색 반경 (m), 기본 5km
-        page: 페이지
-        size: 한 페이지당 결과 수
-
-    Returns:
-        dict: {items: [...], total_count: int}
-    """
+    """위치 기반 산책로/관광코스 검색"""
     params = {
-        "serviceKey": settings.DATA_GO_KR_API_KEY,
         "numOfRows": size,
         "pageNo": page,
         "MobileOS": "ETC",
         "MobileApp": "LifeEnvMap",
         "_type": "json",
-        "arrange": "E",  # 거리순
+        "arrange": "E",
         "mapX": lng,
         "mapY": lat,
         "radius": radius,
         "contentTypeId": "25",
     }
 
-    # serviceKey는 이미 인코딩된 상태이므로 직접 URL에 붙여야 함
-    query_parts = [f"serviceKey={settings.DATA_GO_KR_API_KEY}"]
-    for k, v in params.items():
-        if k != "serviceKey":
-            query_parts.append(f"{k}={v}")
-    url = f"{TOUR_BASE_URL}/locationBasedList2?{'&'.join(query_parts)}"
-
-    print(f"[DEBUG] Tour API URL: {url[:150]}...")
-
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.get(url)
-
-        print(f"[DEBUG] Tour API status: {resp.status_code}")
-        print(f"[DEBUG] Tour API response: {resp.text[:300]}")
-
-        if resp.status_code != 200:
-            print(f"Tour API error: {resp.status_code} - {resp.text[:200]}")
-            return {"items": [], "total_count": 0}
-
-        try:
-            data = resp.json()
-        except Exception:
-            print(f"Tour API JSON parse error: {resp.text[:200]}")
-            return {"items": [], "total_count": 0}
-
-    # API 에러 응답 체크 (v2는 최상위에 resultCode가 올 수 있음)
-    result_code = data.get("resultCode", "")
-    if result_code and result_code != "0000":
-        # v2 에러 형식
-        print(f"Tour API v2 error: {data.get('resultCode')} - {data.get('resultMsg')}")
-        return {"items": [], "total_count": 0}
-
-    # v1 형식 체크
-    header = data.get("response", {}).get("header", {})
-    header_code = header.get("resultCode", "")
-    if header_code and header_code not in ("0000",):
-        print(f"Tour API result error: {header}")
+    data = await _api_call("locationBasedList2", params)
+    if not data:
         return {"items": [], "total_count": 0}
 
     body = data.get("response", {}).get("body", {})
     total = body.get("totalCount", 0)
     items_data = body.get("items", {})
-    print(f"[DEBUG] totalCount: {total}, items: {str(items_data)[:100]}")
 
     if not items_data or items_data == "":
         return {"items": [], "total_count": 0}
@@ -109,35 +83,23 @@ async def search_trails(
 
     items = []
     for item in raw_items:
-        items.append(
-            {
-                "id": item.get("contentid"),
-                "title": item.get("title"),
-                "address": item.get("addr1", "") + " " + item.get("addr2", ""),
-                "image": item.get("firstimage") or item.get("firstimage2"),
-                "latitude": float(item.get("mapy", 0)),
-                "longitude": float(item.get("mapx", 0)),
-                "distance": float(item.get("dist", 0)),  # 현재 위치에서 거리(m)
-                "tel": item.get("tel"),
-            }
-        )
+        items.append({
+            "id": item.get("contentid"),
+            "title": item.get("title"),
+            "address": (item.get("addr1", "") + " " + item.get("addr2", "")).strip(),
+            "image": item.get("firstimage") or item.get("firstimage2"),
+            "latitude": float(item.get("mapy", 0)),
+            "longitude": float(item.get("mapx", 0)),
+            "distance": float(item.get("dist", 0)),
+            "tel": item.get("tel"),
+        })
 
     return {"items": items, "total_count": total}
 
 
 async def get_trail_detail(content_id: str) -> Optional[dict]:
-    """
-    산책로/코스 상세 정보 조회
-
-    Args:
-        content_id: 콘텐츠 ID
-
-    Returns:
-        dict: 상세 정보
-    """
-    # 기본 정보
+    """산책로/코스 상세 정보 조회"""
     params = {
-        "serviceKey": settings.DATA_GO_KR_API_KEY,
         "MobileOS": "ETC",
         "MobileApp": "LifeEnvMap",
         "_type": "json",
@@ -150,13 +112,9 @@ async def get_trail_detail(content_id: str) -> Optional[dict]:
         "overviewYN": "Y",
     }
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.get(
-            f"{TOUR_BASE_URL}/detailCommon2",
-            params=params,
-        )
-        resp.raise_for_status()
-        data = resp.json()
+    data = await _api_call("detailCommon2", params)
+    if not data:
+        return None
 
     items = (
         data.get("response", {})
@@ -172,7 +130,7 @@ async def get_trail_detail(content_id: str) -> Optional[dict]:
     detail = {
         "id": content_id,
         "title": item.get("title"),
-        "address": item.get("addr1", "") + " " + item.get("addr2", ""),
+        "address": (item.get("addr1", "") + " " + item.get("addr2", "")).strip(),
         "overview": item.get("overview", "").replace("<br>", "\n").replace("<br />", "\n"),
         "image": item.get("firstimage") or item.get("firstimage2"),
         "homepage": item.get("homepage"),
@@ -181,9 +139,8 @@ async def get_trail_detail(content_id: str) -> Optional[dict]:
         "longitude": float(item.get("mapx", 0)),
     }
 
-    # 코스 반복 정보 (구간별 상세)
+    # 코스 반복 정보
     course_params = {
-        "serviceKey": settings.DATA_GO_KR_API_KEY,
         "MobileOS": "ETC",
         "MobileApp": "LifeEnvMap",
         "_type": "json",
@@ -191,35 +148,31 @@ async def get_trail_detail(content_id: str) -> Optional[dict]:
         "contentTypeId": "25",
     }
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.get(
-            f"{TOUR_BASE_URL}/detailInfo2",
-            params=params,
+    course_data = await _api_call("detailInfo2", course_params)
+
+    if course_data:
+        course_items = (
+            course_data.get("response", {})
+            .get("body", {})
+            .get("items", {})
+            .get("item", [])
         )
-        resp.raise_for_status()
-        course_data = resp.json()
-
-    course_items = (
-        course_data.get("response", {})
-        .get("body", {})
-        .get("items", {})
-        .get("item", [])
-    )
-
-    if course_items and course_items != "":
-        if isinstance(course_items, dict):
-            course_items = [course_items]
-        detail["courses"] = [
-            {
-                "number": c.get("subnum"),
-                "name": c.get("subname"),
-                "overview": c.get("subdetailoverview", "")
-                .replace("<br>", "\n")
-                .replace("<br />", "\n"),
-                "image": c.get("subdetailimg"),
-            }
-            for c in course_items
-        ]
+        if course_items and course_items != "":
+            if isinstance(course_items, dict):
+                course_items = [course_items]
+            detail["courses"] = [
+                {
+                    "number": c.get("subnum"),
+                    "name": c.get("subname"),
+                    "overview": c.get("subdetailoverview", "")
+                    .replace("<br>", "\n")
+                    .replace("<br />", "\n"),
+                    "image": c.get("subdetailimg"),
+                }
+                for c in course_items
+            ]
+        else:
+            detail["courses"] = []
     else:
         detail["courses"] = []
 
@@ -232,24 +185,14 @@ async def search_walking_trails(
     page: int = 1,
     size: int = 20,
 ) -> Optional[dict]:
-    """
-    키워드로 산책로/코스 검색
-
-    Args:
-        keyword: 검색어
-        area_code: 지역 코드 (1=서울, 2=인천, 3=대전, ...)
-        page: 페이지
-        size: 한 페이지당 결과 수
-    """
+    """키워드로 산책로/코스 검색"""
     params = {
-        "serviceKey": settings.DATA_GO_KR_API_KEY,
         "numOfRows": size,
         "pageNo": page,
         "MobileOS": "ETC",
         "MobileApp": "LifeEnvMap",
         "_type": "json",
-        "listYN": "Y",
-        "arrange": "R",  # 제목순
+        "arrange": "R",
         "contentTypeId": "25",
     }
 
@@ -259,12 +202,11 @@ async def search_walking_trails(
     if area_code:
         params["areaCode"] = area_code
 
-    url = f"{TOUR_BASE_URL}/searchKeyword2" if keyword else f"{TOUR_BASE_URL}/areaBasedList2"
+    endpoint = "searchKeyword2" if keyword else "areaBasedList2"
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.get(url, params=params)
-        resp.raise_for_status()
-        data = resp.json()
+    data = await _api_call(endpoint, params)
+    if not data:
+        return {"items": [], "total_count": 0}
 
     body = data.get("response", {}).get("body", {})
     total = body.get("totalCount", 0)
@@ -279,15 +221,13 @@ async def search_walking_trails(
 
     items = []
     for item in raw_items:
-        items.append(
-            {
-                "id": item.get("contentid"),
-                "title": item.get("title"),
-                "address": item.get("addr1", "") + " " + item.get("addr2", ""),
-                "image": item.get("firstimage") or item.get("firstimage2"),
-                "latitude": float(item.get("mapy", 0)),
-                "longitude": float(item.get("mapx", 0)),
-            }
-        )
+        items.append({
+            "id": item.get("contentid"),
+            "title": item.get("title"),
+            "address": (item.get("addr1", "") + " " + item.get("addr2", "")).strip(),
+            "image": item.get("firstimage") or item.get("firstimage2"),
+            "latitude": float(item.get("mapy", 0)),
+            "longitude": float(item.get("mapx", 0)),
+        })
 
     return {"items": items, "total_count": total}
