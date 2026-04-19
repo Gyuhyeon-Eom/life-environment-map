@@ -1,0 +1,30 @@
+# Dependencies
+mobile/node_modules/
+backend/__pycache__/
+backend/app/__pycache__/
+backend/**/__pycache__/
+*.pyc
+
+# Environment
+.env
+backend/.env
+mobile/.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+mobile/dist/
+mobile/.expo/
+backend/*.egg-info/
+
+# Data
+data/*.csv
+data/*.json
+data/*.gpx
