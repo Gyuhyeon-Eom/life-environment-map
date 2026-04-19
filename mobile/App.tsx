@@ -51,19 +51,29 @@ export default function App() {
   // 위치 권한 요청 + 현재 위치 가져오기
   useEffect(() => {
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setErrorMsg("위치 권한이 필요합니다");
-        // 권한 없으면 서울 시청 기본값
-        setLocation({ latitude: 37.5665, longitude: 126.978 });
-        return;
-      }
+      try {
+        // 웹에서는 바로 기본 좌표 사용
+        if (Platform.OS === "web") {
+          setLocation({ latitude: 37.5665, longitude: 126.978 });
+          return;
+        }
 
-      const loc = await Location.getCurrentPositionAsync({});
-      setLocation({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-      });
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          setErrorMsg("위치 권한이 필요합니다");
+          setLocation({ latitude: 37.5665, longitude: 126.978 });
+          return;
+        }
+
+        const loc = await Location.getCurrentPositionAsync({});
+        setLocation({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        });
+      } catch (e) {
+        console.log("위치 가져오기 실패:", e);
+        setLocation({ latitude: 37.5665, longitude: 126.978 });
+      }
     })();
   }, []);
 
