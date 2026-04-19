@@ -1,17 +1,25 @@
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View, Text, TouchableOpacity, Platform } from "react-native";
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  Platform,
+} from "react-native";
 import * as Location from "expo-location";
 import { useEffect, useState } from "react";
 import MapViewComponent from "./MapViewComponent";
 import TrailList from "./TrailList";
 import TrailDetail from "./TrailDetail";
 import BloomList from "./BloomList";
+import FeedScreen from "./FeedScreen";
+import { colors } from "./theme";
 
 // 탭 타입
-type TabType = "trail" | "bloom";
+type TabType = "home" | "trail" | "bloom" | "feed";
 
 // 뷰 타입
-type ViewType = "map" | "trail-list" | "trail-detail";
+type ViewType = "main" | "trail-list" | "trail-detail";
 
 // 날씨 데이터 타입
 type WeatherData = {
@@ -30,13 +38,12 @@ export default function App() {
     latitude: number;
     longitude: number;
   } | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>("trail");
-  const [currentView, setCurrentView] = useState<ViewType>("map");
+  const [activeTab, setActiveTab] = useState<TabType>("home");
+  const [currentView, setCurrentView] = useState<ViewType>("main");
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // 위치 권한 요청 + 현재 위치 가져오기
   useEffect(() => {
     (async () => {
       try {
@@ -44,76 +51,51 @@ export default function App() {
           setLocation({ latitude: 37.5665, longitude: 126.978 });
           return;
         }
-
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
-          setErrorMsg("위치 권한이 필요합니다");
           setLocation({ latitude: 37.5665, longitude: 126.978 });
           return;
         }
-
         const loc = await Location.getCurrentPositionAsync({});
         setLocation({
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
         });
       } catch (e) {
-        console.log("위치 가져오기 실패:", e);
         setLocation({ latitude: 37.5665, longitude: 126.978 });
       }
     })();
   }, []);
 
-  // 날씨 데이터 가져오기
   useEffect(() => {
     if (!location) return;
-
-    const fetchWeather = async () => {
+    (async () => {
       try {
         const resp = await fetch(
           `${API_BASE}/api/v1/weather?lat=${location.latitude}&lng=${location.longitude}`
         );
         const data = await resp.json();
-        if (data.status === "ok") {
-          setWeather(data.data);
-        }
-      } catch (e) {
-        console.log("날씨 데이터 로드 실패:", e);
-      }
-    };
-
-    fetchWeather();
+        if (data.status === "ok") setWeather(data.data);
+      } catch (e) {}
+    })();
   }, [location]);
 
-  // 강수 형태 텍스트
-  const getRainTypeText = (type?: number) => {
-    switch (type) {
-      case 0: return null;
-      case 1: return "비";
-      case 2: return "비/눈";
-      case 3: return "눈";
-      default: return null;
-    }
-  };
-
-  // 탭 변경 핸들러
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
-    setCurrentView("map");
+    setCurrentView("main");
     setSelectedTrailId(null);
   };
 
   if (!location) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>
-          {errorMsg || "위치를 불러오는 중..."}
-        </Text>
+        <Text style={styles.loadingEmoji}>🌿</Text>
+        <Text style={styles.loadingText}>위치를 불러오는 중...</Text>
       </View>
     );
   }
 
-  // 산책로 상세 화면
+  // 산책로 상세
   if (currentView === "trail-detail" && selectedTrailId) {
     return (
       <TrailDetail
@@ -130,32 +112,38 @@ export default function App() {
     <View style={styles.container}>
       <StatusBar style="dark" />
 
-      {/* 상단 날씨 정보 바 */}
-      <View style={styles.weatherBar}>
-        {weather ? (
-          <View style={styles.weatherContent}>
+      {/* 상단 헤더 */}
+      <View style={styles.header}>
+        <Text style={styles.logo}>걸어볼까</Text>
+        {weather && (
+          <View style={styles.weatherBadge}>
             <Text style={styles.weatherTemp}>
-              {weather.temperature?.toFixed(1)}°C
+              {weather.temperature?.toFixed(0)}°
             </Text>
-            <Text style={styles.weatherDetail}>
+            <Text style={styles.weatherInfo}>
               습도 {weather.humidity}%
             </Text>
-            <Text style={styles.weatherDetail}>
-              풍속 {weather.wind_speed}m/s
-            </Text>
-            {getRainTypeText(weather.rain_type) && (
-              <Text style={styles.weatherRain}>
-                {getRainTypeText(weather.rain_type)}
-              </Text>
-            )}
           </View>
-        ) : (
-          <Text style={styles.weatherDetail}>날씨 로딩 중...</Text>
         )}
       </View>
 
-      {/* 메인 컨텐츠 영역 */}
-      {activeTab === "trail" && currentView === "trail-list" ? (
+      {/* 메인 컨텐츠 */}
+      {activeTab === "home" && (
+        <>
+          <MapViewComponent location={location} weather={weather} />
+          <TouchableOpacity
+            style={styles.floatingBtn}
+            onPress={() => {
+              setActiveTab("trail");
+              setCurrentView("trail-list");
+            }}
+          >
+            <Text style={styles.floatingBtnText}>주변 산책로 둘러보기</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      {activeTab === "trail" && currentView === "trail-list" && (
         <TrailList
           latitude={location.latitude}
           longitude={location.longitude}
@@ -164,57 +152,49 @@ export default function App() {
             setCurrentView("trail-detail");
           }}
         />
-      ) : activeTab === "bloom" ? (
-        <BloomList
-          onSelectSpot={(spot) => {
-            console.log("선택:", spot.name);
-            // TODO: 상세 화면 연결
+      )}
+
+      {activeTab === "trail" && currentView === "main" && (
+        <TrailList
+          latitude={location.latitude}
+          longitude={location.longitude}
+          onSelectTrail={(trail) => {
+            setSelectedTrailId(trail.id);
+            setCurrentView("trail-detail");
           }}
         />
-      ) : (
-        <>
-          <MapViewComponent location={location} weather={weather} />
-          {/* 산책로 목록 보기 버튼 */}
-          {activeTab === "trail" && (
-            <TouchableOpacity
-              style={styles.listButton}
-              onPress={() => setCurrentView("trail-list")}
-            >
-              <Text style={styles.listButtonText}>주변 산책로 목록 보기</Text>
-            </TouchableOpacity>
-          )}
-        </>
       )}
+
+      {activeTab === "bloom" && (
+        <BloomList onSelectSpot={(spot) => console.log(spot.name)} />
+      )}
+
+      {activeTab === "feed" && <FeedScreen />}
 
       {/* 하단 탭 바 */}
       <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "trail" && styles.activeTab]}
-          onPress={() => handleTabChange("trail")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "trail" && styles.activeTabText,
-            ]}
+        {[
+          { key: "home" as TabType, label: "홈" },
+          { key: "trail" as TabType, label: "산책로" },
+          { key: "bloom" as TabType, label: "개화" },
+          { key: "feed" as TabType, label: "피드" },
+        ].map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={styles.tab}
+            onPress={() => handleTabChange(tab.key)}
           >
-            산책로
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "bloom" && styles.activeTab]}
-          onPress={() => handleTabChange("bloom")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "bloom" && styles.activeTabText,
-            ]}
-          >
-            벚꽃/단풍
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === tab.key && styles.tabTextActive,
+              ]}
+            >
+              {tab.label}
+            </Text>
+            {activeTab === tab.key && <View style={styles.tabDot} />}
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
@@ -223,123 +203,106 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: colors.bg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
+  },
+  loadingEmoji: {
+    fontSize: 48,
+    marginBottom: 16,
   },
   loadingText: {
     fontSize: 16,
-    color: "#666",
+    color: colors.textSecondary,
   },
-  weatherBar: {
-    backgroundColor: "#fff",
-    paddingTop: 50,
+  // 헤더 (인스타 스타일)
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 54,
     paddingBottom: 12,
     paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    backgroundColor: colors.white,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
   },
-  weatherContent: {
+  logo: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: colors.primary,
+    letterSpacing: -0.5,
+  },
+  weatherBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    backgroundColor: colors.primaryBg,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
   },
   weatherTemp: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.primary,
   },
-  weatherDetail: {
-    fontSize: 14,
-    color: "#666",
+  weatherInfo: {
+    fontSize: 12,
+    color: colors.primary,
   },
-  weatherRain: {
-    fontSize: 14,
-    color: "#2196F3",
-    fontWeight: "600",
-  },
-  // 산책로 목록 보기 버튼
-  listButton: {
+  // 플로팅 버튼
+  floatingBtn: {
     position: "absolute",
-    bottom: 100,
+    bottom: 110,
     alignSelf: "center",
-    backgroundColor: "#4CAF50",
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    paddingVertical: 14,
+    borderRadius: 28,
+    elevation: 6,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
-  listButtonText: {
-    color: "#fff",
+  floatingBtnText: {
+    color: colors.white,
     fontSize: 15,
     fontWeight: "700",
   },
-  // 커밍순
-  comingSoon: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-    backgroundColor: "#FFF8E1",
-  },
-  comingSoonTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#F57F17",
-    marginBottom: 8,
-  },
-  comingSoonText: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 8,
-  },
-  comingSoonSub: {
-    fontSize: 13,
-    color: "#999",
-    textAlign: "center",
-  },
-  // 탭 바
+  // 탭 바 (인스타 스타일)
   tabBar: {
     flexDirection: "row",
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
+    backgroundColor: colors.white,
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border,
     paddingBottom: 30,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    paddingTop: 8,
   },
   tab: {
     flex: 1,
-    paddingVertical: 14,
     alignItems: "center",
-  },
-  activeTab: {
-    borderTopWidth: 3,
-    borderTopColor: "#4CAF50",
+    paddingVertical: 8,
   },
   tabText: {
-    fontSize: 14,
-    color: "#999",
-    fontWeight: "500",
+    fontSize: 11,
+    color: colors.textLight,
+    fontWeight: "600",
   },
-  activeTabText: {
-    color: "#4CAF50",
+  tabTextActive: {
+    color: colors.text,
     fontWeight: "700",
+  },
+  tabDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.primary,
+    marginTop: 4,
   },
 });
