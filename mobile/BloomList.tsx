@@ -5,10 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import { useEffect, useState } from "react";
+import { colors, radius } from "./theme";
 
 const API_BASE = "http://127.0.0.1:9090";
+const { width } = Dimensions.get("window");
 
 type BloomSpot = {
   id: string;
@@ -55,7 +58,7 @@ export default function BloomList({ onSelectSpot }: Props) {
     switch (status) {
       case "만개":
       case "절정":
-        return "#E91E63";
+        return colors.cherry;
       case "개화":
       case "단풍 진행 중":
         return "#FF5722";
@@ -66,59 +69,80 @@ export default function BloomList({ onSelectSpot }: Props) {
       case "첫 단풍":
         return "#FFC107";
       default:
-        return "#9E9E9E";
+        return colors.textLight;
     }
   };
 
-  const getProgressBarColor = (type: string) => {
-    return type === "cherry" ? "#FFB6C1" : "#FF8C00";
+  const getTypeColor = (type: string) => {
+    return type === "cherry" ? colors.cherry : colors.autumn;
+  };
+
+  const getTypeBg = (type: string) => {
+    return type === "cherry" ? colors.cherryLight : colors.autumnLight;
+  };
+
+  const getProgressEmoji = (type: string, progress: number) => {
+    if (type === "cherry") {
+      if (progress >= 90) return "🌸";
+      if (progress >= 50) return "🌷";
+      return "🌱";
+    } else {
+      if (progress >= 90) return "🍁";
+      if (progress >= 50) return "🍂";
+      return "🌿";
+    }
   };
 
   const renderSpot = ({ item }: { item: BloomSpot }) => (
     <TouchableOpacity
       style={styles.card}
       onPress={() => onSelectSpot(item)}
-      activeOpacity={0.7}
+      activeOpacity={0.85}
     >
-      <View style={styles.cardHeader}>
-        <View style={styles.typeTag}>
-          <Text style={styles.typeTagText}>{item.type_label}</Text>
-        </View>
-        <Text style={styles.region}>{item.region}</Text>
+      {/* 상단: 이모지 + 진행률 */}
+      <View style={[styles.cardTop, { backgroundColor: getTypeBg(item.type) }]}>
+        <Text style={styles.emoji}>
+          {getProgressEmoji(item.type, item.progress_pct)}
+        </Text>
+        <Text style={[styles.progressBig, { color: getTypeColor(item.type) }]}>
+          {item.progress_pct}%
+        </Text>
       </View>
 
-      <Text style={styles.spotName}>{item.name}</Text>
+      {/* 하단: 정보 */}
+      <View style={styles.cardBottom}>
+        <View style={styles.nameRow}>
+          <Text style={styles.spotName} numberOfLines={1}>{item.name}</Text>
+          <View style={[styles.typePill, { backgroundColor: getTypeBg(item.type) }]}>
+            <Text style={[styles.typeText, { color: getTypeColor(item.type) }]}>
+              {item.type_label}
+            </Text>
+          </View>
+        </View>
 
-      {/* 진행률 바 */}
-      <View style={styles.progressContainer}>
+        <Text style={styles.regionText}>📍 {item.region}</Text>
+
+        {/* 진행률 바 */}
         <View style={styles.progressBar}>
           <View
             style={[
               styles.progressFill,
               {
                 width: `${item.progress_pct}%`,
-                backgroundColor: getProgressBarColor(item.type),
+                backgroundColor: getTypeColor(item.type),
               },
             ]}
           />
         </View>
-        <Text style={styles.progressText}>{item.progress_pct}%</Text>
-      </View>
 
-      {/* 상태 */}
-      <View style={styles.statusRow}>
-        <View
-          style={[
-            styles.statusDot,
-            { backgroundColor: getStatusColor(item.status) },
-          ]}
-        />
-        <Text style={styles.statusText}>{item.status}</Text>
-        {item.estimated_bloom_date && (
-          <Text style={styles.dateText}>
-            예상 개화일: {item.estimated_bloom_date}
-          </Text>
-        )}
+        {/* 상태 */}
+        <View style={styles.statusRow}>
+          <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
+          <Text style={styles.statusText}>{item.status}</Text>
+          {item.estimated_bloom_date && (
+            <Text style={styles.dateText}>{item.estimated_bloom_date}</Text>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -126,32 +150,34 @@ export default function BloomList({ onSelectSpot }: Props) {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#E91E63" />
-        <Text style={styles.loadingText}>예측 데이터 불러오는 중...</Text>
+        <ActivityIndicator size="large" color={colors.cherry} />
+        <Text style={styles.loadingText}>개화 예측 데이터 불러오는 중...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* 필터 탭 */}
+      {/* 필터 */}
       <View style={styles.filterRow}>
-        {(["all", "cherry", "autumn"] as const).map((f) => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
-            onPress={() => setFilter(f)}
-          >
-            <Text
+        {(["all", "cherry", "autumn"] as const).map((f) => {
+          const isActive = filter === f;
+          const label = f === "all" ? "전체" : f === "cherry" ? "🌸 벚꽃" : "🍁 단풍";
+          return (
+            <TouchableOpacity
+              key={f}
               style={[
-                styles.filterText,
-                filter === f && styles.filterTextActive,
+                styles.filterBtn,
+                isActive && styles.filterBtnActive,
               ]}
+              onPress={() => setFilter(f)}
             >
-              {f === "all" ? "전체" : f === "cherry" ? "벚꽃" : "단풍"}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <FlatList
@@ -168,7 +194,7 @@ export default function BloomList({ onSelectSpot }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF8F0",
+    backgroundColor: colors.bg,
   },
   centerContainer: {
     flex: 1,
@@ -178,119 +204,125 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: "#666",
+    color: colors.textSecondary,
   },
   // 필터
   filterRow: {
     flexDirection: "row",
-    padding: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.white,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
     gap: 8,
   },
   filterBtn: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#f0f0f0",
+    borderRadius: radius.full,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   filterBtnActive: {
-    backgroundColor: "#E91E63",
+    backgroundColor: colors.text,
+    borderColor: colors.text,
   },
   filterText: {
-    fontSize: 14,
-    color: "#666",
-    fontWeight: "500",
-  },
-  filterTextActive: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-  // 카드
-  list: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  typeTag: {
-    backgroundColor: "#FFF0F5",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  typeTagText: {
-    fontSize: 12,
-    color: "#E91E63",
+    fontSize: 13,
+    color: colors.textSecondary,
     fontWeight: "600",
   },
-  region: {
-    fontSize: 13,
-    color: "#888",
+  filterTextActive: {
+    color: colors.white,
   },
-  spotName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 12,
+  // 리스트
+  list: {
+    padding: 16,
   },
-  // 진행률
-  progressContainer: {
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: radius.lg,
+    marginBottom: 14,
+    overflow: "hidden",
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+  },
+  cardTop: {
+    paddingVertical: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emoji: {
+    fontSize: 40,
+    marginBottom: 4,
+  },
+  progressBig: {
+    fontSize: 28,
+    fontWeight: "800",
+  },
+  cardBottom: {
+    padding: 14,
+  },
+  nameRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  spotName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.text,
+    flex: 1,
+  },
+  typePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    marginLeft: 8,
+  },
+  typeText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  regionText: {
+    fontSize: 13,
+    color: colors.textSecondary,
     marginBottom: 10,
-    gap: 8,
   },
   progressBar: {
-    flex: 1,
-    height: 8,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 4,
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: 2,
     overflow: "hidden",
+    marginBottom: 10,
   },
   progressFill: {
     height: "100%",
-    borderRadius: 4,
+    borderRadius: 2,
   },
-  progressText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#333",
-    width: 45,
-    textAlign: "right",
-  },
-  // 상태
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   statusText: {
-    fontSize: 14,
-    color: "#555",
+    fontSize: 13,
+    color: colors.textSecondary,
     fontWeight: "600",
   },
   dateText: {
     fontSize: 12,
-    color: "#888",
+    color: colors.textLight,
     marginLeft: "auto",
   },
 });

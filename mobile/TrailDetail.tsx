@@ -5,10 +5,13 @@ import {
   StyleSheet,
   Image,
   TouchableOpacity,
+  Dimensions,
 } from "react-native";
 import { useState, useEffect } from "react";
+import { colors, radius } from "./theme";
 
 const API_BASE = "http://127.0.0.1:9090";
+const { width } = Dimensions.get("window");
 
 type TrailDetailData = {
   id: string;
@@ -60,15 +63,6 @@ export default function TrailDetail({ contentId, onBack }: Props) {
     }
   };
 
-  const getRainTypeText = (type?: number) => {
-    switch (type) {
-      case 1: return "비";
-      case 2: return "비/눈";
-      case 3: return "눈";
-      default: return null;
-    }
-  };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -80,9 +74,10 @@ export default function TrailDetail({ contentId, onBack }: Props) {
   if (!detail) {
     return (
       <View style={styles.loadingContainer}>
+        <Text style={styles.emptyEmoji}>😢</Text>
         <Text style={styles.loadingText}>정보를 찾을 수 없습니다</Text>
-        <TouchableOpacity onPress={onBack}>
-          <Text style={styles.backLink}>돌아가기</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={onBack}>
+          <Text style={styles.backBtnText}>돌아가기</Text>
         </TouchableOpacity>
       </View>
     );
@@ -92,84 +87,88 @@ export default function TrailDetail({ contentId, onBack }: Props) {
     <View style={styles.container}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>뒤로</Text>
+        <TouchableOpacity onPress={onBack} style={styles.headerBack}>
+          <Text style={styles.headerBackText}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {detail.title}
         </Text>
-        <View style={styles.backButton} />
+        <View style={styles.headerBack} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 이미지 */}
-        {detail.image && (
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* 히어로 이미지 */}
+        {detail.image ? (
           <Image source={{ uri: detail.image }} style={styles.heroImage} />
+        ) : (
+          <View style={[styles.heroImage, styles.noImage]}>
+            <Text style={styles.noImageEmoji}>🏞️</Text>
+          </View>
         )}
 
-        {/* 기본 정보 */}
-        <View style={styles.section}>
+        {/* 제목 + 위치 */}
+        <View style={styles.titleSection}>
           <Text style={styles.title}>{detail.title}</Text>
-          <Text style={styles.address}>{detail.address}</Text>
+          <Text style={styles.address}>📍 {detail.address}</Text>
         </View>
 
-        {/* 현재 날씨 */}
+        {/* 날씨 카드 */}
         {detail.weather && (
           <View style={styles.weatherCard}>
-            <Text style={styles.sectionTitle}>현재 날씨</Text>
-            <View style={styles.weatherRow}>
+            <Text style={styles.sectionLabel}>지금 이곳 날씨</Text>
+            <View style={styles.weatherGrid}>
               <View style={styles.weatherItem}>
                 <Text style={styles.weatherValue}>
-                  {detail.weather.temperature?.toFixed(1)}°C
+                  {detail.weather.temperature?.toFixed(0)}°
                 </Text>
                 <Text style={styles.weatherLabel}>기온</Text>
               </View>
+              <View style={styles.weatherDivider} />
               <View style={styles.weatherItem}>
                 <Text style={styles.weatherValue}>
                   {detail.weather.humidity}%
                 </Text>
                 <Text style={styles.weatherLabel}>습도</Text>
               </View>
+              <View style={styles.weatherDivider} />
               <View style={styles.weatherItem}>
                 <Text style={styles.weatherValue}>
-                  {detail.weather.wind_speed}m/s
+                  {detail.weather.wind_speed}
                 </Text>
-                <Text style={styles.weatherLabel}>풍속</Text>
+                <Text style={styles.weatherLabel}>풍속(m/s)</Text>
               </View>
             </View>
-            {getRainTypeText(detail.weather.rain_type) && (
-              <Text style={styles.rainInfo}>
-                현재 {getRainTypeText(detail.weather.rain_type)} 내리는 중
-              </Text>
-            )}
           </View>
         )}
 
         {/* 소개 */}
         {detail.overview && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>소개</Text>
+            <Text style={styles.sectionLabel}>소개</Text>
             <Text style={styles.overview}>{detail.overview}</Text>
           </View>
         )}
 
-        {/* 코스 정보 */}
+        {/* 코스 */}
         {detail.courses && detail.courses.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
+            <Text style={styles.sectionLabel}>
               코스 ({detail.courses.length}구간)
             </Text>
             {detail.courses.map((course, idx) => (
-              <View key={idx} style={styles.courseCard}>
-                <View style={styles.courseNumber}>
-                  <Text style={styles.courseNumberText}>{idx + 1}</Text>
+              <View key={idx} style={styles.courseItem}>
+                <View style={styles.courseTimeline}>
+                  <View style={styles.courseDot} />
+                  {idx < (detail.courses?.length ?? 0) - 1 && (
+                    <View style={styles.courseLine} />
+                  )}
                 </View>
-                <View style={styles.courseInfo}>
+                <View style={styles.courseContent}>
                   <Text style={styles.courseName}>
                     {course.name || `구간 ${idx + 1}`}
                   </Text>
                   {course.overview && (
-                    <Text style={styles.courseOverview} numberOfLines={3}>
+                    <Text style={styles.courseDesc} numberOfLines={3}>
                       {course.overview}
                     </Text>
                   )}
@@ -182,7 +181,7 @@ export default function TrailDetail({ contentId, onBack }: Props) {
         {/* 연락처 */}
         {detail.tel && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>연락처</Text>
+            <Text style={styles.sectionLabel}>연락처</Text>
             <Text style={styles.tel}>{detail.tel}</Text>
           </View>
         )}
@@ -196,151 +195,182 @@ export default function TrailDetail({ contentId, onBack }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: colors.white,
   },
   loadingText: {
-    fontSize: 16,
-    color: "#666",
-  },
-  backLink: {
-    marginTop: 12,
-    color: "#4CAF50",
     fontSize: 15,
+    color: colors.textSecondary,
+    marginTop: 8,
+  },
+  emptyEmoji: {
+    fontSize: 48,
+  },
+  backBtn: {
+    marginTop: 16,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: radius.xl,
+  },
+  backBtnText: {
+    color: colors.white,
+    fontWeight: "600",
   },
   // 헤더
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 50,
+    paddingTop: 54,
     paddingBottom: 12,
     paddingHorizontal: 16,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    backgroundColor: colors.white,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
   },
-  backButton: {
-    width: 60,
+  headerBack: {
+    width: 40,
   },
-  backButtonText: {
-    fontSize: 16,
-    color: "#4CAF50",
-    fontWeight: "600",
+  headerBackText: {
+    fontSize: 24,
+    color: colors.text,
   },
   headerTitle: {
     flex: 1,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "700",
-    color: "#333",
+    color: colors.text,
     textAlign: "center",
   },
-  content: {
-    flex: 1,
-  },
+  // 히어로
   heroImage: {
-    width: "100%",
-    height: 220,
+    width: width,
+    height: width * 0.65,
+    backgroundColor: "#f0f0f0",
   },
-  section: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+  noImage: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.primaryBg,
+  },
+  noImageEmoji: {
+    fontSize: 64,
+  },
+  // 제목
+  titleSection: {
+    padding: 20,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
   },
   title: {
     fontSize: 22,
-    fontWeight: "bold",
-    color: "#333",
+    fontWeight: "800",
+    color: colors.text,
     marginBottom: 6,
+    letterSpacing: -0.3,
   },
   address: {
     fontSize: 14,
-    color: "#888",
+    color: colors.textSecondary,
   },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#333",
-    marginBottom: 12,
-  },
-  overview: {
-    fontSize: 14,
-    color: "#555",
-    lineHeight: 22,
-  },
-  // 날씨 카드
+  // 날씨
   weatherCard: {
     margin: 16,
     padding: 16,
-    backgroundColor: "#f0f9f0",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#c8e6c9",
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.lg,
   },
-  weatherRow: {
+  weatherGrid: {
     flexDirection: "row",
     justifyContent: "space-around",
+    alignItems: "center",
+    marginTop: 8,
   },
   weatherItem: {
     alignItems: "center",
+    flex: 1,
   },
   weatherValue: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: 22,
+    fontWeight: "800",
+    color: colors.primary,
   },
   weatherLabel: {
     fontSize: 12,
-    color: "#888",
+    color: colors.primary,
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  weatherDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: colors.primaryLight,
+  },
+  // 섹션
+  section: {
+    padding: 20,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.text,
+    marginBottom: 10,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  overview: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 22,
+  },
+  // 코스 (타임라인)
+  courseItem: {
+    flexDirection: "row",
+    minHeight: 60,
+  },
+  courseTimeline: {
+    width: 24,
+    alignItems: "center",
+  },
+  courseDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
     marginTop: 4,
   },
-  rainInfo: {
-    textAlign: "center",
-    marginTop: 12,
-    color: "#2196F3",
-    fontWeight: "600",
-  },
-  // 코스
-  courseCard: {
-    flexDirection: "row",
-    marginBottom: 12,
-    alignItems: "flex-start",
-  },
-  courseNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#4CAF50",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-    marginTop: 2,
-  },
-  courseNumberText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  courseInfo: {
+  courseLine: {
+    width: 2,
     flex: 1,
+    backgroundColor: colors.primaryLight,
+    marginVertical: 4,
+  },
+  courseContent: {
+    flex: 1,
+    paddingLeft: 12,
+    paddingBottom: 16,
   },
   courseName: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#333",
+    color: colors.text,
     marginBottom: 4,
   },
-  courseOverview: {
+  courseDesc: {
     fontSize: 13,
-    color: "#666",
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   tel: {
     fontSize: 15,
-    color: "#4CAF50",
+    color: colors.primary,
+    fontWeight: "600",
   },
 });
