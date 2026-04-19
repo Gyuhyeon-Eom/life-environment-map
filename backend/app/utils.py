@@ -1,15 +1,17 @@
 """공통 유틸리티"""
 
 import httpx
+from urllib.parse import quote
 from .config import settings
 
 
 def build_api_url(base_url: str, endpoint: str, params: dict) -> str:
     """
-    serviceKey 이중 인코딩 방지를 위한 URL 직접 조합.
-    httpx의 params= 를 쓰면 디코딩 키의 +, /, = 가 이중 인코딩됨.
+    serviceKey를 올바르게 URL 인코딩하여 URL 조합.
+    디코딩 키(+, /, =)를 직접 인코딩 처리.
     """
-    url = f"{base_url}/{endpoint}?serviceKey={settings.DATA_GO_KR_API_KEY}"
+    encoded_key = quote(settings.DATA_GO_KR_API_KEY, safe="")
+    url = f"{base_url}/{endpoint}?serviceKey={encoded_key}"
     for k, v in params.items():
         url += f"&{k}={v}"
     return url
