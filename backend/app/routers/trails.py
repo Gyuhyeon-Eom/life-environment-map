@@ -10,6 +10,7 @@ from ..collectors.trail_collector import (
     get_trail_detail,
     search_walking_trails,
 )
+from ..collectors.osm_trail_collector import get_osm_trails
 from ..collectors.weather_collector import get_current_weather, latlon_to_grid
 from ..collectors.air_quality_collector import get_realtime_air_quality
 
@@ -54,6 +55,25 @@ async def search(
         "status": "ok",
         "data": result["items"],
         "total_count": result["total_count"],
+    }
+
+
+@router.get("/nearby-paths")
+async def nearby_paths(
+    lat: float = Query(..., description="위도"),
+    lng: float = Query(..., description="경도"),
+    radius: int = Query(3000, description="검색 반경 (m), 최대 5000"),
+):
+    """OSM 기반 주변 산책로/보행로 geometry 조회"""
+    radius = min(radius, 5000)
+    result = await get_osm_trails(lat, lng, radius)
+    if not result:
+        return {"status": "ok", "data": [], "count": 0}
+
+    return {
+        "status": "ok",
+        "data": result["trails"],
+        "count": result["count"],
     }
 
 

@@ -110,103 +110,52 @@ export default function MapViewComponent({ location, weather }: Props) {
     new WeatherControl().addTo(map);
     ` : ''}
 
-    // 산책로 API 호출 + 지도 표시
-    var trailColor = '#E76F51';      // 코랄/주황
-    var trailColorLight = 'rgba(231,111,81,0.15)';
-
-    var trailIcon = L.divIcon({
-      className: '',
-      html: '<div style="width:12px;height:12px;background:' + trailColor + ';border:2.5px solid white;border-radius:50%;box-shadow:0 0 0 3px rgba(231,111,81,0.25),0 1px 4px rgba(0,0,0,0.3);"></div>',
-      iconSize: [12, 12],
-      iconAnchor: [6, 6]
-    });
-
+    // OSM 산책로 geometry 직접 표시
     var trailGroup = L.layerGroup().addTo(map);
 
-    fetch('${API_BASE}/api/v1/trails?lat=' + lat + '&lng=' + lng + '&radius=5000')
+    var categoryStyles = {
+      hiking:     { color: '#E76F51', weight: 4, opacity: 0.75, dashArray: null },
+      footway:    { color: '#E9967A', weight: 3, opacity: 0.65, dashArray: '6 4' },
+      pedestrian: { color: '#F4A261', weight: 3.5, opacity: 0.7, dashArray: null },
+      path:       { color: '#DDA0A0', weight: 2.5, opacity: 0.55, dashArray: '4 4' },
+    };
+
+    fetch('${API_BASE}/api/v1/trails/nearby-paths?lat=' + lat + '&lng=' + lng + '&radius=3000')
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (!data.data || data.data.length === 0) return;
 
-        var trails = data.data;
-        var coords = [];
+        data.data.forEach(function(trail) {
+          if (!trail.geometry || trail.geometry.length < 2) return;
 
-        trails.forEach(function(t) {
-          if (!t.latitude || !t.longitude) return;
-          coords.push([t.latitude, t.longitude]);
+          var style = categoryStyles[trail.category] || categoryStyles.path;
 
-          var popup = '<div style="font-family:-apple-system,sans-serif;min-width:140px;">'
-            + '<div style="font-weight:700;font-size:13px;color:#262626;margin-bottom:4px;">' + (t.title || '산책로') + '</div>'
-            + (t.address ? '<div style="font-size:11px;color:#8E8E8E;margin-bottom:4px;">' + t.address + '</div>' : '')
-            + (t.distance ? '<div style="font-size:11px;color:' + trailColor + ';font-weight:600;">' + (t.distance/1000).toFixed(1) + 'km</div>' : '')
-            + '</div>';
+          var line = L.polyline(trail.geometry, {
+            color: style.color,
+            weight: style.weight,
+            opacity: style.opacity,
+            dashArray: style.dashArray,
+            lineCap: 'round',
+            lineJoin: 'round',
+          }).addTo(trailGroup);
 
-          L.marker([t.latitude, t.longitude], { icon: trailIcon })
-            .addTo(trailGroup)
-            .bindPopup(popup);
-        });
-
-        // 실제 도로 경로 그리기 (OSRM 도보 라우팅)
-        function fetchRoute(fromLat, fromLng, toLat, toLng, style) {
-          var url = 'https://router.project-osrm.org/route/v1/foot/'
-            + fromLng + ',' + fromLat + ';' + toLng + ',' + toLat
-            + '?overview=full&geometries=geojson';
-
-          return fetch(url)
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-              if (data.routes && data.routes[0]) {
-                var geojson = data.routes[0].geometry;
-                var latlngs = geojson.coordinates.map(function(c) { return [c[1], c[0]]; });
-                L.polyline(latlngs, style).addTo(trailGroup);
-              }
-            })
-            .catch(function() {});
-        }
-
-        // 산책로끼리 순서대로 도로 경로 연결
-        if (coords.length >= 2) {
-          coords.sort(function(a, b) {
-            var angleA = Math.atan2(a[0] - lat, a[1] - lng);
-            var angleB = Math.atan2(b[0] - lat, b[1] - lng);
-            return angleA - angleB;
-          });
-
-          for (var i = 0; i < coords.length - 1; i++) {
-            (function(a, b) {
-              fetchRoute(a[0], a[1], b[0], b[1], {
-                color: trailColor,
-                weight: 4,
-                opacity: 0.5,
-                dashArray: '10 6',
-                lineCap: 'round',
-              });
-            })(coords[i], coords[i + 1]);
+          // 이름 있으면 팝업
+          if (trail.name) {
+            var catLabel = { hiking: '등산로', footway: '산책로', pedestrian: '보행자거리', path: '오솔길' };
+            var popup = '<div style="font-family:-apple-system,sans-serif;">'
+              + '<div style="font-weight:700;font-size:13px;color:#262626;">' + trail.name + '</div>'
+              + '<div style="font-size:11px;color:#8E8E8E;margin-top:3px;">' + (catLabel[trail.category] || trail.type) + '</div>'
+              + (trail.surface ? '<div style="font-size:10px;color:#aaa;margin-top:2px;">노면: ' + trail.surface + '</div>' : '')
+              + '</div>';
+            line.bindPopup(popup);
           }
-        }
-
-        // 내 위치 → 가장 가까운 산책로 3개까지 도로 경로
-        var sorted = coords.slice().sort(function(a, b) {
-          var dA = Math.pow(a[0]-lat,2) + Math.pow(a[1]-lng,2);
-          var dB = Math.pow(b[0]-lat,2) + Math.pow(b[1]-lng,2);
-          return dA - dB;
         });
-        var nearest = sorted.slice(0, 3);
 
-        nearest.forEach(function(c, idx) {
-          setTimeout(function() {
-            fetchRoute(lat, lng, c[0], c[1], {
-              color: trailColor,
-              weight: 3,
-              opacity: 0.35,
-              dashArray: '6 4',
-              lineCap: 'round',
-            });
-          }, idx * 300); // 요청 간 딜레이
-        });
+        // 카운트 표시용 콘솔
+        console.log('OSM trails loaded:', data.count);
       })
       .catch(function(e) {
-        console.log('Trail fetch error:', e);
+        console.log('OSM trail fetch error:', e);
       });
 
     // 더미 커뮤니티 핀
@@ -237,7 +186,9 @@ export default function MapViewComponent({ location, weather }: Props) {
         div.style.lineHeight = '1.8';
         div.innerHTML = ''
           + '<div><span style="display:inline-block;width:10px;height:10px;background:#2D6A4F;border-radius:50%;margin-right:6px;vertical-align:middle;"></span>내 위치</div>'
-          + '<div><span style="display:inline-block;width:10px;height:10px;background:#E76F51;border-radius:50%;margin-right:6px;vertical-align:middle;"></span>산책로</div>'
+          + '<div><span style="display:inline-block;width:16px;height:3px;background:#E76F51;margin-right:6px;vertical-align:middle;border-radius:2px;"></span>등산로</div>'
+          + '<div><span style="display:inline-block;width:16px;height:2px;background:#E9967A;margin-right:6px;vertical-align:middle;border-radius:2px;border-top:2px dashed #E9967A;"></span>산책로</div>'
+          + '<div><span style="display:inline-block;width:16px;height:3px;background:#F4A261;margin-right:6px;vertical-align:middle;border-radius:2px;"></span>보행자거리</div>'
           + '<div><span style="margin-right:6px;">📸</span>포토스팟</div>';
         return div;
       }
