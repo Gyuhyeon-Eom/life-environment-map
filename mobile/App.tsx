@@ -8,9 +8,11 @@ import {
   ScrollView,
   Image,
   Dimensions,
+  Animated,
+  PanResponder,
 } from "react-native";
 import * as Location from "expo-location";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import MapViewComponent from "./MapViewComponent";
 import TrailList from "./TrailList";
 import TrailDetail from "./TrailDetail";
@@ -18,7 +20,12 @@ import BloomList from "./BloomList";
 import WalkScoreCard from "./WalkScoreCard";
 import { colors, radius } from "./theme";
 
-const { width } = Dimensions.get("window");
+const { width, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+// 바텀시트 높이 설정
+const SHEET_PEEK = 160;       // 쾌적도만 살짝 보이는 높이
+const SHEET_MID = SCREEN_HEIGHT * 0.5;  // 중간
+const SHEET_FULL = SCREEN_HEIGHT * 0.85; // 최대 펼침
 
 type TabType = "home" | "trail" | "bloom" | "photo" | "friends";
 type ViewType = "main" | "trail-list" | "trail-detail";
@@ -126,6 +133,52 @@ export default function App() {
     })();
   }, [location]);
 
+  // 드래그 바텀시트
+  const sheetY = useRef(new Animated.Value(SCREEN_HEIGHT - SHEET_PEEK)).current;
+  const lastSheetY = useRef(SCREEN_HEIGHT - SHEET_PEEK);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 5,
+      onPanResponderGrant: () => {
+        sheetY.setOffset(lastSheetY.current);
+        sheetY.setValue(0);
+      },
+      onPanResponderMove: (_, g) => {
+        sheetY.setValue(g.dy);
+      },
+      onPanResponderRelease: (_, g) => {
+        sheetY.flattenOffset();
+        const currentY = lastSheetY.current + g.dy;
+
+        // 스냅 포인트 결정
+        let snapTo: number;
+        if (g.vy > 0.5) {
+          // 빠르게 아래로 → peek
+          snapTo = SCREEN_HEIGHT - SHEET_PEEK;
+        } else if (g.vy < -0.5) {
+          // 빠르게 위로 → full
+          snapTo = SCREEN_HEIGHT - SHEET_FULL;
+        } else if (currentY < SCREEN_HEIGHT - (SHEET_FULL + SHEET_MID) / 2) {
+          snapTo = SCREEN_HEIGHT - SHEET_FULL;
+        } else if (currentY < SCREEN_HEIGHT - (SHEET_MID + SHEET_PEEK) / 2) {
+          snapTo = SCREEN_HEIGHT - SHEET_MID;
+        } else {
+          snapTo = SCREEN_HEIGHT - SHEET_PEEK;
+        }
+
+        lastSheetY.current = snapTo;
+        Animated.spring(sheetY, {
+          toValue: snapTo,
+          friction: 8,
+          tension: 65,
+          useNativeDriver: false,
+        }).start();
+      },
+    })
+  ).current;
+
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
     setCurrentView("main");
@@ -165,6 +218,7 @@ export default function App() {
       {/* ===== 홈 ===== */}
       {activeTab === "home" && (
         <View style={styles.homeContainer}>
+          {/* 헤더 — 지도 위 오버레이 */}
           <View style={styles.mapHeader}>
             <Text style={styles.logo}>걸어볼까</Text>
             {weather && (
@@ -180,22 +234,60 @@ export default function App() {
             )}
           </View>
 
+          {/* 지도 풀스크린 */}
           <MapViewComponent location={location} weather={weather} />
 
-          <View style={styles.bottomSheet}>
+          {/* 드래그 바텀시트 */}
+          <Animated.View
+            style={[styles.bottomSheet, { top: sheetY }]}
+            {...panResponder.panHandlers}
+          >
             <View style={styles.bottomSheetHandle} />
 
+            {/* 쾌적도 카드 (항상 보임) */}
+            <WalkScoreCard
+              latitude={location.latitude}
+              longitude={location.longitude}
+            />
+
+            {/* 빠른 액션 (항상 보임) */}
+            <View style={styles.quickActions}>
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={() => handleTabChange("trail")}
+              >
+                <Image source={require("./assets/icons/trail.jpg")} style={styles.actionIcon} />
+                <Text style={styles.actionLabel}>산책로</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={() => handleTabChange("bloom")}
+              >
+                <Image source={require("./assets/icons/bloom.jpg")} style={styles.actionIcon} />
+                <Text style={styles.actionLabel}>개화현황</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={() => handleTabChange("photo")}
+              >
+                <Image source={require("./assets/icons/camera.jpg")} style={styles.actionIcon} />
+                <Text style={styles.actionLabel}>사진공유</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={() => handleTabChange("friends")}
+              >
+                <Image source={require("./assets/icons/friends.jpg")} style={styles.actionIcon} />
+                <Text style={styles.actionLabel}>친구</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* 위로 드래그하면 보이는 영역 */}
             <ScrollView
               showsVerticalScrollIndicator={false}
-              style={styles.bottomSheetScroll}
-              contentContainerStyle={styles.bottomSheetContent}
+              style={styles.sheetScrollArea}
+              nestedScrollEnabled
             >
-              {/* 산책 쾌적도 카드 */}
-              <WalkScoreCard
-                latitude={location.latitude}
-                longitude={location.longitude}
-              />
-
               <View style={styles.bottomSheetHeader}>
                 <Text style={styles.bottomSheetTitle}>친구들의 산책</Text>
                 <TouchableOpacity style={styles.seeAllBtn}>
@@ -210,7 +302,7 @@ export default function App() {
               >
                 {COMMUNITY_POSTS.map((post) => (
                   <TouchableOpacity key={post.id} style={styles.communityCard} activeOpacity={0.85}>
-                    <Image source={{ uri: post.image }} style={styles.communityImage} />
+                    <Image source={{ uri: post.image }} style={styles.communityCardImage} />
                     <View style={styles.communityOverlay}>
                       <View style={[styles.airBadge, { backgroundColor: getAirColor(post.airQuality) }]}>
                         <Text style={styles.airBadgeText}>{post.airQuality}</Text>
@@ -231,39 +323,8 @@ export default function App() {
                   </TouchableOpacity>
                 ))}
               </ScrollView>
-
-              <View style={styles.quickActions}>
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => handleTabChange("trail")}
-                >
-                  <Image source={require("./assets/icons/trail.jpg")} style={styles.actionIcon} />
-                  <Text style={styles.actionLabel}>산책로</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => handleTabChange("bloom")}
-                >
-                  <Image source={require("./assets/icons/bloom.jpg")} style={styles.actionIcon} />
-                  <Text style={styles.actionLabel}>개화현황</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => handleTabChange("photo")}
-                >
-                  <Image source={require("./assets/icons/camera.jpg")} style={styles.actionIcon} />
-                  <Text style={styles.actionLabel}>사진공유</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => handleTabChange("friends")}
-                >
-                  <Image source={require("./assets/icons/friends.jpg")} style={styles.actionIcon} />
-                  <Text style={styles.actionLabel}>친구</Text>
-                </TouchableOpacity>
-              </View>
             </ScrollView>
-          </View>
+          </Animated.View>
         </View>
       )}
 
@@ -464,36 +525,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
   },
-  // 바텀 시트
+  // 드래그 바텀시트
   bottomSheet: {
     position: "absolute",
-    bottom: 0,
     left: 0,
     right: 0,
+    height: SCREEN_HEIGHT,
     backgroundColor: colors.white,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     paddingTop: 8,
-    paddingBottom: 34,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 10,
-  },
-  bottomSheetScroll: {
-    maxHeight: 420,
-  },
-  bottomSheetContent: {
-    paddingBottom: 10,
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 12,
   },
   bottomSheetHandle: {
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.border,
+    backgroundColor: "#D0D0D0",
     alignSelf: "center",
-    marginBottom: 14,
+    marginBottom: 10,
+  },
+  sheetScrollArea: {
+    flex: 1,
+    paddingBottom: 40,
   },
   bottomSheetHeader: {
     flexDirection: "row",
@@ -524,18 +582,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   communityCard: {
-    width: width * 0.42,
-    borderRadius: radius.lg,
+    width: width * 0.36,
+    borderRadius: radius.md,
     overflow: "hidden",
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  communityImage: {
+  communityCardImage: {
     width: "100%",
-    height: width * 0.42,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
+    height: width * 0.28,
+    borderTopLeftRadius: radius.md,
+    borderTopRightRadius: radius.md,
   },
   communityOverlay: {
     position: "absolute",
