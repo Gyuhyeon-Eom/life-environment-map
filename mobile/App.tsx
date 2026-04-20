@@ -102,7 +102,24 @@ export default function App() {
     (async () => {
       try {
         if (Platform.OS === "web") {
-          setLocation({ latitude: 37.5665, longitude: 126.978 });
+          // 브라우저 Geolocation API 사용
+          if (navigator?.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                setLocation({
+                  latitude: pos.coords.latitude,
+                  longitude: pos.coords.longitude,
+                });
+              },
+              () => {
+                // 거부 시 기본값
+                setLocation({ latitude: 37.5665, longitude: 126.978 });
+              },
+              { enableHighAccuracy: true, timeout: 10000 }
+            );
+          } else {
+            setLocation({ latitude: 37.5665, longitude: 126.978 });
+          }
           return;
         }
         const { status } = await Location.requestForegroundPermissionsAsync();
