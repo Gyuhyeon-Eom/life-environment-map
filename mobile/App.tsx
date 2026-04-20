@@ -23,9 +23,10 @@ import { colors, radius } from "./theme";
 const { width, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 // 바텀시트 높이 설정
+const TAB_BAR_HEIGHT = 70;
 const SHEET_PEEK = 160;       // 쾌적도만 살짝 보이는 높이
 const SHEET_MID = SCREEN_HEIGHT * 0.5;  // 중간
-const SHEET_FULL = SCREEN_HEIGHT * 0.85; // 최대 펼침
+const SHEET_FULL = SCREEN_HEIGHT * 0.85 - TAB_BAR_HEIGHT; // 탭바 위까지만
 
 type TabType = "home" | "trail" | "bloom" | "photo" | "friends";
 type ViewType = "main" | "trail-list" | "trail-detail";
@@ -134,8 +135,8 @@ export default function App() {
   }, [location]);
 
   // 드래그 바텀시트
-  const sheetY = useRef(new Animated.Value(SCREEN_HEIGHT - SHEET_PEEK)).current;
-  const lastSheetY = useRef(SCREEN_HEIGHT - SHEET_PEEK);
+  const sheetY = useRef(new Animated.Value(SCREEN_HEIGHT - SHEET_PEEK - TAB_BAR_HEIGHT)).current;
+  const lastSheetY = useRef(SCREEN_HEIGHT - SHEET_PEEK - TAB_BAR_HEIGHT);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -152,20 +153,22 @@ export default function App() {
         sheetY.flattenOffset();
         const currentY = lastSheetY.current + g.dy;
 
-        // 스냅 포인트 결정
+        // 스냅 포인트 결정 (탭바 위)
+        const peekY = SCREEN_HEIGHT - SHEET_PEEK - TAB_BAR_HEIGHT;
+        const midY = SCREEN_HEIGHT - SHEET_MID - TAB_BAR_HEIGHT;
+        const fullY = SCREEN_HEIGHT - SHEET_FULL - TAB_BAR_HEIGHT;
+
         let snapTo: number;
         if (g.vy > 0.5) {
-          // 빠르게 아래로 → peek
-          snapTo = SCREEN_HEIGHT - SHEET_PEEK;
+          snapTo = peekY;
         } else if (g.vy < -0.5) {
-          // 빠르게 위로 → full
-          snapTo = SCREEN_HEIGHT - SHEET_FULL;
-        } else if (currentY < SCREEN_HEIGHT - (SHEET_FULL + SHEET_MID) / 2) {
-          snapTo = SCREEN_HEIGHT - SHEET_FULL;
-        } else if (currentY < SCREEN_HEIGHT - (SHEET_MID + SHEET_PEEK) / 2) {
-          snapTo = SCREEN_HEIGHT - SHEET_MID;
+          snapTo = fullY;
+        } else if (currentY < (fullY + midY) / 2) {
+          snapTo = fullY;
+        } else if (currentY < (midY + peekY) / 2) {
+          snapTo = midY;
         } else {
-          snapTo = SCREEN_HEIGHT - SHEET_PEEK;
+          snapTo = peekY;
         }
 
         lastSheetY.current = snapTo;
@@ -545,11 +548,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     paddingTop: 8,
+    zIndex: 5,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 16,
-    elevation: 12,
+    elevation: 8,
   },
   bottomSheetHandle: {
     width: 36,
@@ -774,18 +778,19 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 70,
+    height: TAB_BAR_HEIGHT,
     flexDirection: "row",
     backgroundColor: colors.white,
     borderTopWidth: 0.5,
     borderTopColor: colors.border,
     paddingBottom: 10,
     paddingTop: 8,
+    zIndex: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 12,
   },
   tabItem: {
     flex: 1,
