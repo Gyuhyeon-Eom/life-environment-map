@@ -250,38 +250,6 @@ export default function App() {
               longitude={location.longitude}
             />
 
-            {/* 빠른 액션 (항상 보임) */}
-            <View style={styles.quickActions}>
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => handleTabChange("trail")}
-              >
-                <Image source={require("./assets/icons/trail.jpg")} style={styles.actionIcon} />
-                <Text style={styles.actionLabel}>산책로</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => handleTabChange("bloom")}
-              >
-                <Image source={require("./assets/icons/bloom.jpg")} style={styles.actionIcon} />
-                <Text style={styles.actionLabel}>개화현황</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => handleTabChange("photo")}
-              >
-                <Image source={require("./assets/icons/camera.jpg")} style={styles.actionIcon} />
-                <Text style={styles.actionLabel}>사진공유</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => handleTabChange("friends")}
-              >
-                <Image source={require("./assets/icons/friends.jpg")} style={styles.actionIcon} />
-                <Text style={styles.actionLabel}>친구</Text>
-              </TouchableOpacity>
-            </View>
-
             {/* 위로 드래그하면 보이는 영역 */}
             <ScrollView
               showsVerticalScrollIndicator={false}
@@ -444,6 +412,47 @@ export default function App() {
           </View>
         </>
       )}
+
+      {/* ===== 하단 고정 탭바 ===== */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => handleTabChange("home")}
+        >
+          <View style={[styles.tabIconWrap, activeTab === "home" && styles.tabIconActive]}>
+            <Text style={[styles.tabIcon, activeTab === "home" && styles.tabIconTextActive]}>~</Text>
+          </View>
+          <Text style={[styles.tabLabel, activeTab === "home" && styles.tabLabelActive]}>홈</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => handleTabChange("trail")}
+        >
+          <Image source={require("./assets/icons/trail.jpg")} style={styles.tabIconImg} />
+          <Text style={[styles.tabLabel, activeTab === "trail" && styles.tabLabelActive]}>산책로</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => handleTabChange("bloom")}
+        >
+          <Image source={require("./assets/icons/bloom.jpg")} style={styles.tabIconImg} />
+          <Text style={[styles.tabLabel, activeTab === "bloom" && styles.tabLabelActive]}>개화현황</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => handleTabChange("photo")}
+        >
+          <Image source={require("./assets/icons/camera.jpg")} style={styles.tabIconImg} />
+          <Text style={[styles.tabLabel, activeTab === "photo" && styles.tabLabelActive]}>사진공유</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => handleTabChange("friends")}
+        >
+          <Image source={require("./assets/icons/friends.jpg")} style={styles.tabIconImg} />
+          <Text style={[styles.tabLabel, activeTab === "friends" && styles.tabLabelActive]}>친구</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -452,6 +461,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
+    paddingBottom: 70,  // 탭바 높이만큼
   },
   // 로딩
   loadingContainer: {
@@ -757,5 +767,61 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: colors.primary,
+  },
+  // 하단 고정 탭바
+  tabBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 70,
+    flexDirection: "row",
+    backgroundColor: colors.white,
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border,
+    paddingBottom: 10,
+    paddingTop: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+  },
+  tabIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  tabIconActive: {
+    backgroundColor: colors.primaryBg,
+  },
+  tabIcon: {
+    fontSize: 18,
+    color: colors.textSecondary,
+  },
+  tabIconTextActive: {
+    color: colors.primary,
+  },
+  tabIconImg: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: "500",
+    color: colors.textSecondary,
+  },
+  tabLabelActive: {
+    color: colors.primary,
+    fontWeight: "700",
   },
 });
