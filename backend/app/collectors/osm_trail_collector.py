@@ -18,25 +18,18 @@ OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
 def _build_query(lat: float, lng: float, radius: int = 3000) -> str:
     """Overpass QL 쿼리 생성"""
-    return f"""
-[out:json][timeout:15];
-(
-  // 보행자 도로, 산책로, 오솔길
-  way["highway"="footway"](around:{radius},{lat},{lng});
-  way["highway"="path"](around:{radius},{lat},{lng});
-  way["highway"="pedestrian"](around:{radius},{lat},{lng});
-  way["highway"="track"]["tracktype"="grade1"](around:{radius},{lat},{lng});
-
-  // 하이킹/도보 경로 (relation)
-  relation["route"="hiking"](around:{radius},{lat},{lng});
-  relation["route"="foot"](around:{radius},{lat},{lng});
-
-  // 공원 내 경로
-  way["highway"="footway"]["leisure"](around:{radius},{lat},{lng});
-  way["footway"="sidewalk"](around:{radius},{lat},{lng});
-);
-out body geom;
-"""
+    return (
+        f'[out:json][timeout:15];'
+        f'('
+        f'way["highway"="footway"](around:{radius},{lat},{lng});'
+        f'way["highway"="path"](around:{radius},{lat},{lng});'
+        f'way["highway"="pedestrian"](around:{radius},{lat},{lng});'
+        f'way["highway"="track"]["tracktype"="grade1"](around:{radius},{lat},{lng});'
+        f'relation["route"="hiking"](around:{radius},{lat},{lng});'
+        f'relation["route"="foot"](around:{radius},{lat},{lng});'
+        f');'
+        f'out body geom;'
+    )
 
 
 async def get_osm_trails(
@@ -65,11 +58,11 @@ async def get_osm_trails(
     query = _build_query(lat, lng, radius)
 
     try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            resp = await client.post(
+        headers = {"User-Agent": "LifeEnvMap/1.0", "Accept": "*/*"}
+        async with httpx.AsyncClient(timeout=20.0, headers=headers) as client:
+            resp = await client.get(
                 OVERPASS_URL,
-                data={"data": query},
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                params={"data": query},
             )
 
             if resp.status_code != 200:
@@ -101,8 +94,8 @@ async def get_osm_trails(
                         [[p["lat"], p["lon"]] for p in member["geometry"]]
                     )
 
-        if len(geometry) < 2:
-            continue
+        if len(geometry) < 3:
+            continue  # 좌표 3개 미만은 너무 짧은 경로
 
         name = tags.get("name", tags.get("description", ""))
         highway = tags.get("highway", "")
@@ -134,6 +127,10 @@ async def get_osm_trails(
                          "route", "description", "operator", "network")
             },
         })
+
+    # geometry가 긴(의미있는) 경로 우선 정렬, 최대 500개
+    trails.sort(key=lambda t: len(t["geometry"]), reverse=True)
+    trails = trails[:500]
 
     return {
         "trails": trails,
