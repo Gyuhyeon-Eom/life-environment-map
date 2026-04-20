@@ -15,6 +15,7 @@ import MapViewComponent from "./MapViewComponent";
 import TrailList from "./TrailList";
 import TrailDetail from "./TrailDetail";
 import BloomList from "./BloomList";
+import WalkScoreCard from "./WalkScoreCard";
 import { colors, radius } from "./theme";
 
 const { width } = Dimensions.get("window");
@@ -183,72 +184,85 @@ export default function App() {
 
           <View style={styles.bottomSheet}>
             <View style={styles.bottomSheetHandle} />
-            <View style={styles.bottomSheetHeader}>
-              <Text style={styles.bottomSheetTitle}>친구들의 산책</Text>
-              <TouchableOpacity style={styles.seeAllBtn}>
-                <Text style={styles.seeAllText}>전체보기</Text>
-              </TouchableOpacity>
-            </View>
 
             <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.cardScroll}
+              showsVerticalScrollIndicator={false}
+              style={styles.bottomSheetScroll}
+              contentContainerStyle={styles.bottomSheetContent}
             >
-              {COMMUNITY_POSTS.map((post) => (
-                <TouchableOpacity key={post.id} style={styles.communityCard} activeOpacity={0.85}>
-                  <Image source={{ uri: post.image }} style={styles.communityImage} />
-                  <View style={styles.communityOverlay}>
-                    <View style={[styles.airBadge, { backgroundColor: getAirColor(post.airQuality) }]}>
-                      <Text style={styles.airBadgeText}>{post.airQuality}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.communityInfo}>
-                    <Text style={styles.communityLocation}>{post.location}</Text>
-                    <View style={styles.communityMeta}>
-                      <Text style={styles.communityUser}>{post.user}</Text>
-                      <Text style={styles.communityTime}>{post.timeAgo}</Text>
-                    </View>
-                    <View style={styles.communityTags}>
-                      {post.tags.map((tag) => (
-                        <Text key={tag} style={styles.communityTag}>#{tag}</Text>
-                      ))}
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+              {/* 산책 쾌적도 카드 */}
+              <WalkScoreCard
+                latitude={location.latitude}
+                longitude={location.longitude}
+              />
 
-            <View style={styles.quickActions}>
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => handleTabChange("trail")}
+              <View style={styles.bottomSheetHeader}>
+                <Text style={styles.bottomSheetTitle}>친구들의 산책</Text>
+                <TouchableOpacity style={styles.seeAllBtn}>
+                  <Text style={styles.seeAllText}>전체보기</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.cardScroll}
               >
-                <Image source={require("./assets/icons/trail.jpg")} style={styles.actionIcon} />
-                <Text style={styles.actionLabel}>산책로</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => handleTabChange("bloom")}
-              >
-                <Image source={require("./assets/icons/bloom.jpg")} style={styles.actionIcon} />
-                <Text style={styles.actionLabel}>개화현황</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => handleTabChange("photo")}
-              >
-                <Image source={require("./assets/icons/camera.jpg")} style={styles.actionIcon} />
-                <Text style={styles.actionLabel}>사진공유</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={() => handleTabChange("friends")}
-              >
-                <Image source={require("./assets/icons/friends.jpg")} style={styles.actionIcon} />
-                <Text style={styles.actionLabel}>친구</Text>
-              </TouchableOpacity>
-            </View>
+                {COMMUNITY_POSTS.map((post) => (
+                  <TouchableOpacity key={post.id} style={styles.communityCard} activeOpacity={0.85}>
+                    <Image source={{ uri: post.image }} style={styles.communityImage} />
+                    <View style={styles.communityOverlay}>
+                      <View style={[styles.airBadge, { backgroundColor: getAirColor(post.airQuality) }]}>
+                        <Text style={styles.airBadgeText}>{post.airQuality}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.communityInfo}>
+                      <Text style={styles.communityLocation}>{post.location}</Text>
+                      <View style={styles.communityMeta}>
+                        <Text style={styles.communityUser}>{post.user}</Text>
+                        <Text style={styles.communityTime}>{post.timeAgo}</Text>
+                      </View>
+                      <View style={styles.communityTags}>
+                        {post.tags.map((tag) => (
+                          <Text key={tag} style={styles.communityTag}>#{tag}</Text>
+                        ))}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <View style={styles.quickActions}>
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => handleTabChange("trail")}
+                >
+                  <Image source={require("./assets/icons/trail.jpg")} style={styles.actionIcon} />
+                  <Text style={styles.actionLabel}>산책로</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => handleTabChange("bloom")}
+                >
+                  <Image source={require("./assets/icons/bloom.jpg")} style={styles.actionIcon} />
+                  <Text style={styles.actionLabel}>개화현황</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => handleTabChange("photo")}
+                >
+                  <Image source={require("./assets/icons/camera.jpg")} style={styles.actionIcon} />
+                  <Text style={styles.actionLabel}>사진공유</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => handleTabChange("friends")}
+                >
+                  <Image source={require("./assets/icons/friends.jpg")} style={styles.actionIcon} />
+                  <Text style={styles.actionLabel}>친구</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </View>
       )}
@@ -466,6 +480,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 10,
+  },
+  bottomSheetScroll: {
+    maxHeight: 420,
+  },
+  bottomSheetContent: {
+    paddingBottom: 10,
   },
   bottomSheetHandle: {
     width: 36,
