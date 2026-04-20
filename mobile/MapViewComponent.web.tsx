@@ -146,34 +146,64 @@ export default function MapViewComponent({ location, weather }: Props) {
             .bindPopup(popup);
         });
 
-        // 산책로끼리 연결선 (노드링크)
+        // 실제 도로 경로 그리기 (OSRM 도보 라우팅)
+        function fetchRoute(fromLat, fromLng, toLat, toLng, style) {
+          var url = 'https://router.project-osrm.org/route/v1/foot/'
+            + fromLng + ',' + fromLat + ';' + toLng + ',' + toLat
+            + '?overview=full&geometries=geojson';
+
+          return fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (data.routes && data.routes[0]) {
+                var geojson = data.routes[0].geometry;
+                var latlngs = geojson.coordinates.map(function(c) { return [c[1], c[0]]; });
+                L.polyline(latlngs, style).addTo(trailGroup);
+              }
+            })
+            .catch(function() {});
+        }
+
+        // 산책로끼리 순서대로 도로 경로 연결
         if (coords.length >= 2) {
-          // 거리 기준 정렬 (내 위치 기준 시계방향)
           coords.sort(function(a, b) {
             var angleA = Math.atan2(a[0] - lat, a[1] - lng);
             var angleB = Math.atan2(b[0] - lat, b[1] - lng);
             return angleA - angleB;
           });
 
-          // 순서대로 연결
-          L.polyline(coords, {
-            color: trailColor,
-            weight: 3,
-            opacity: 0.6,
-            dashArray: '8 6',
-            lineCap: 'round',
-          }).addTo(trailGroup);
-
-          // 각 산책로에서 내 위치로 연결 (얇은 점선)
-          coords.forEach(function(c) {
-            L.polyline([[lat, lng], c], {
-              color: trailColor,
-              weight: 1.5,
-              opacity: 0.25,
-              dashArray: '4 4',
-            }).addTo(trailGroup);
-          });
+          for (var i = 0; i < coords.length - 1; i++) {
+            (function(a, b) {
+              fetchRoute(a[0], a[1], b[0], b[1], {
+                color: trailColor,
+                weight: 4,
+                opacity: 0.5,
+                dashArray: '10 6',
+                lineCap: 'round',
+              });
+            })(coords[i], coords[i + 1]);
+          }
         }
+
+        // 내 위치 → 가장 가까운 산책로 3개까지 도로 경로
+        var sorted = coords.slice().sort(function(a, b) {
+          var dA = Math.pow(a[0]-lat,2) + Math.pow(a[1]-lng,2);
+          var dB = Math.pow(b[0]-lat,2) + Math.pow(b[1]-lng,2);
+          return dA - dB;
+        });
+        var nearest = sorted.slice(0, 3);
+
+        nearest.forEach(function(c, idx) {
+          setTimeout(function() {
+            fetchRoute(lat, lng, c[0], c[1], {
+              color: trailColor,
+              weight: 3,
+              opacity: 0.35,
+              dashArray: '6 4',
+              lineCap: 'round',
+            });
+          }, idx * 300); // 요청 간 딜레이
+        });
       })
       .catch(function(e) {
         console.log('Trail fetch error:', e);
