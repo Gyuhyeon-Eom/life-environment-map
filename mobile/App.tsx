@@ -240,7 +240,16 @@ export default function App() {
         <View style={styles.homeContainer}>
           {/* 헤더 — 지도 위 오버레이 */}
           <View style={styles.mapHeader}>
-            <Text style={styles.logo}>걸어볼까</Text>
+            <View style={styles.logoRow}>
+              <Image
+                source={require("./assets/mascot.jpg")}
+                style={styles.logoMascot}
+              />
+              <View>
+                <Text style={styles.logo}>걸어볼까</Text>
+                <Text style={styles.logoSub}>오늘도 한 걸음</Text>
+              </View>
+            </View>
             {weather && (
               <View style={styles.weatherChip}>
                 <Text style={styles.weatherChipTemp}>
@@ -524,11 +533,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: "rgba(255,255,255,0.92)",
   },
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  logoMascot: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+  },
   logo: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "800",
     color: colors.primary,
     letterSpacing: -0.5,
+  },
+  logoSub: {
+    fontSize: 10,
+    fontWeight: "500",
+    color: colors.textSecondary,
+    marginTop: 1,
+    letterSpacing: 0.5,
   },
   weatherChip: {
     flexDirection: "row",
