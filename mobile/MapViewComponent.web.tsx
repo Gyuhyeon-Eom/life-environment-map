@@ -1,12 +1,12 @@
 import { View, StyleSheet, Dimensions } from "react-native";
-import { useRef, useEffect } from "react";
-
-const { width, height } = Dimensions.get("window");
+import { useRef } from "react";
 
 type Props = {
   location: { latitude: number; longitude: number };
   weather: any;
 };
+
+const API_BASE = "http://127.0.0.1:9090";
 
 export default function MapViewComponent({ location, weather }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -110,24 +110,109 @@ export default function MapViewComponent({ location, weather }: Props) {
     new WeatherControl().addTo(map);
     ` : ''}
 
+    // 산책로 API 호출 + 지도 표시
+    var trailColor = '#E76F51';      // 코랄/주황
+    var trailColorLight = 'rgba(231,111,81,0.15)';
+
+    var trailIcon = L.divIcon({
+      className: '',
+      html: '<div style="width:12px;height:12px;background:' + trailColor + ';border:2.5px solid white;border-radius:50%;box-shadow:0 0 0 3px rgba(231,111,81,0.25),0 1px 4px rgba(0,0,0,0.3);"></div>',
+      iconSize: [12, 12],
+      iconAnchor: [6, 6]
+    });
+
+    var trailGroup = L.layerGroup().addTo(map);
+
+    fetch('${API_BASE}/api/v1/trails?lat=' + lat + '&lng=' + lng + '&radius=5000')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.data || data.data.length === 0) return;
+
+        var trails = data.data;
+        var coords = [];
+
+        trails.forEach(function(t) {
+          if (!t.latitude || !t.longitude) return;
+          coords.push([t.latitude, t.longitude]);
+
+          var popup = '<div style="font-family:-apple-system,sans-serif;min-width:140px;">'
+            + '<div style="font-weight:700;font-size:13px;color:#262626;margin-bottom:4px;">' + (t.title || '산책로') + '</div>'
+            + (t.address ? '<div style="font-size:11px;color:#8E8E8E;margin-bottom:4px;">' + t.address + '</div>' : '')
+            + (t.distance ? '<div style="font-size:11px;color:' + trailColor + ';font-weight:600;">' + (t.distance/1000).toFixed(1) + 'km</div>' : '')
+            + '</div>';
+
+          L.marker([t.latitude, t.longitude], { icon: trailIcon })
+            .addTo(trailGroup)
+            .bindPopup(popup);
+        });
+
+        // 산책로끼리 연결선 (노드링크)
+        if (coords.length >= 2) {
+          // 거리 기준 정렬 (내 위치 기준 시계방향)
+          coords.sort(function(a, b) {
+            var angleA = Math.atan2(a[0] - lat, a[1] - lng);
+            var angleB = Math.atan2(b[0] - lat, b[1] - lng);
+            return angleA - angleB;
+          });
+
+          // 순서대로 연결
+          L.polyline(coords, {
+            color: trailColor,
+            weight: 3,
+            opacity: 0.6,
+            dashArray: '8 6',
+            lineCap: 'round',
+          }).addTo(trailGroup);
+
+          // 각 산책로에서 내 위치로 연결 (얇은 점선)
+          coords.forEach(function(c) {
+            L.polyline([[lat, lng], c], {
+              color: trailColor,
+              weight: 1.5,
+              opacity: 0.25,
+              dashArray: '4 4',
+            }).addTo(trailGroup);
+          });
+        }
+      })
+      .catch(function(e) {
+        console.log('Trail fetch error:', e);
+      });
+
     // 더미 커뮤니티 핀
     var photoIcon = L.divIcon({
       className: '',
-      html: '<div style="font-size:20px;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3))">📸</div>',
-      iconSize: [24, 24],
-      iconAnchor: [12, 12]
+      html: '<div style="font-size:18px;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3))">📸</div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
     });
 
     var pins = [
-      { lat: lat + 0.008, lng: lng - 0.012, label: '북한산 둘레길' },
-      { lat: lat - 0.005, lng: lng + 0.015, label: '한강공원' },
-      { lat: lat + 0.003, lng: lng + 0.008, label: '남산타워 근처' },
+      { lat: lat + 0.006, lng: lng - 0.009, label: '산책 포토스팟' },
+      { lat: lat - 0.004, lng: lng + 0.011, label: '공원 풍경' },
+      { lat: lat + 0.002, lng: lng + 0.006, label: '거리 산책' },
     ];
 
     pins.forEach(function(p) {
       L.marker([p.lat, p.lng], { icon: photoIcon }).addTo(map)
         .bindPopup('<b>' + p.label + '</b>');
     });
+
+    // 범례
+    var Legend = L.Control.extend({
+      options: { position: 'bottomleft' },
+      onAdd: function() {
+        var div = L.DomUtil.create('div', 'weather-control');
+        div.style.fontSize = '11px';
+        div.style.lineHeight = '1.8';
+        div.innerHTML = ''
+          + '<div><span style="display:inline-block;width:10px;height:10px;background:#2D6A4F;border-radius:50%;margin-right:6px;vertical-align:middle;"></span>내 위치</div>'
+          + '<div><span style="display:inline-block;width:10px;height:10px;background:#E76F51;border-radius:50%;margin-right:6px;vertical-align:middle;"></span>산책로</div>'
+          + '<div><span style="margin-right:6px;">📸</span>포토스팟</div>';
+        return div;
+      }
+    });
+    new Legend().addTo(map);
   </script>
 </body>
 </html>`;
