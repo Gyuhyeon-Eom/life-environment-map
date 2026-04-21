@@ -162,25 +162,36 @@ export default function MapViewComponent({ location, weather }: Props) {
 
     // 검색은 React Native 쪽에서 처리 (location prop 변경으로 지도 재렌더)
 
-    // 내 위치 마커 (배낭곰돌이 캐릭터)
+    // 내 위치 마커 (배낭곰돌이 SVG)
+    var bearSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 56" width="44" height="52">'
+      + '<polygon points="20,48 28,48 24,56" fill="white" stroke="#2D6A4F" stroke-width="1.5" stroke-linejoin="round"/>'
+      + '<circle cx="24" cy="24" r="22" fill="white" stroke="#2D6A4F" stroke-width="2.5"/>'
+      + '<circle cx="10" cy="8" r="6" fill="#C4956A" stroke="#2D6A4F" stroke-width="1.5"/>'
+      + '<circle cx="10" cy="8" r="3" fill="#E8C9A0"/>'
+      + '<circle cx="38" cy="8" r="6" fill="#C4956A" stroke="#2D6A4F" stroke-width="1.5"/>'
+      + '<circle cx="38" cy="8" r="3" fill="#E8C9A0"/>'
+      + '<circle cx="24" cy="26" r="16" fill="#D4A574"/>'
+      + '<ellipse cx="24" cy="32" rx="10" ry="8" fill="#E8C9A0"/>'
+      + '<circle cx="18" cy="22" r="2.5" fill="#333"/><circle cx="19" cy="21" r="1" fill="white"/>'
+      + '<circle cx="30" cy="22" r="2.5" fill="#333"/><circle cx="31" cy="21" r="1" fill="white"/>'
+      + '<ellipse cx="24" cy="27" rx="3" ry="2" fill="#333"/>'
+      + '<path d="M21,30 Q24,33 27,30" fill="none" stroke="#333" stroke-width="1.2" stroke-linecap="round"/>'
+      + '<ellipse cx="14" cy="28" rx="3" ry="2" fill="#FFB5B5" opacity="0.5"/>'
+      + '<ellipse cx="34" cy="28" rx="3" ry="2" fill="#FFB5B5" opacity="0.5"/>'
+      + '<path d="M16,20 L16,35" stroke="#2D6A4F" stroke-width="2" stroke-linecap="round"/>'
+      + '<path d="M32,20 L32,35" stroke="#2D6A4F" stroke-width="2" stroke-linecap="round"/>'
+      + '</svg>';
+
     var bearIcon = L.divIcon({
       className: '',
-      html: '<div class="pulse-ring"></div>'
-        + '<div style="'
-        + 'width:40px;height:40px;border-radius:50%;'
-        + 'background:white;border:3px solid #2D6A4F;'
-        + 'box-shadow:0 2px 8px rgba(0,0,0,0.25);'
-        + 'display:flex;align-items:center;justify-content:center;'
-        + 'overflow:hidden;position:relative;z-index:2;'
-        + '">'
-        + '<img src="assets/mascot.jpg" style="width:34px;height:34px;border-radius:50%;object-fit:cover;" />'
-        + '</div>',
-      iconSize: [40, 40],
-      iconAnchor: [20, 20]
+      html: '<div class="pulse-ring" style="margin-left:-8px;margin-top:-4px;"></div>'
+        + '<div style="position:relative;z-index:2;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.25));">' + bearSvg + '</div>',
+      iconSize: [44, 52],
+      iconAnchor: [22, 52]
     });
 
     L.marker([lat, lng], { icon: bearIcon }).addTo(map)
-      .bindPopup('<b>나의 위치</b><br><span style="font-size:11px;color:#8E8E8E;">배낭곰돌이가 산책 중!</span>', { offset: [0, -20] });
+      .bindPopup('<b>나의 위치</b><br><span style="font-size:11px;color:#8E8E8E;">배낭곰돌이가 산책 중!</span>', { offset: [0, -52] });
 
     // 날씨 오버레이
     ${weather ? `
@@ -364,38 +375,44 @@ export default function MapViewComponent({ location, weather }: Props) {
     // 초기 로드
     loadPOIs(lat, lng);
 
-    // POI 필터 컨트롤
+    // POI 필터 컨트롤 (접이식, 좌측 하단)
     var poiLabels = {
       cafe: '카페', toilet: '화장실', convenience: '편의점',
       bench: '벤치', drinking_water: '음수대', parking: '주차장',
       restaurant: '음식점', pharmacy: '약국'
     };
     var poiVisible = {};
+    var poiFilterOpen = false;
 
     var PoiFilter = L.Control.extend({
-      options: { position: 'topright' },
+      options: { position: 'bottomleft' },
       onAdd: function() {
         var container = L.DomUtil.create('div', 'weather-control');
-        container.style.marginTop = '50px';
         container.style.fontSize = '11px';
-        container.style.maxWidth = '110px';
+        container.style.maxWidth = '120px';
         container.style.cursor = 'pointer';
 
-        var title = L.DomUtil.create('div', '', container);
-        title.innerHTML = '<b style="font-size:12px;">편의시설</b>';
-        title.style.marginBottom = '6px';
-        title.style.borderBottom = '1px solid #eee';
-        title.style.paddingBottom = '4px';
+        // 토글 버튼
+        var toggleBtn = L.DomUtil.create('div', '', container);
+        toggleBtn.innerHTML = '<b style="font-size:11px;">&#9881; 편의시설</b>';
+        toggleBtn.style.padding = '2px 0';
+
+        // 필터 목록 (기본 숨김)
+        var filterList = L.DomUtil.create('div', '', container);
+        filterList.style.display = 'none';
+        filterList.style.marginTop = '6px';
+        filterList.style.borderTop = '1px solid #eee';
+        filterList.style.paddingTop = '4px';
 
         Object.keys(poiIcons).forEach(function(cat) {
           poiVisible[cat] = true;
-          var row = L.DomUtil.create('div', '', container);
+          var row = L.DomUtil.create('div', '', filterList);
           row.style.padding = '2px 0';
           row.style.display = 'flex';
           row.style.alignItems = 'center';
           row.style.gap = '4px';
           row.dataset.cat = cat;
-          row.innerHTML = '<span style="font-size:13px;">' + poiIcons[cat].emoji + '</span>'
+          row.innerHTML = '<span style="font-size:12px;">' + poiIcons[cat].emoji + '</span>'
             + '<span>' + (poiLabels[cat] || cat) + '</span>';
 
           row.addEventListener('click', function(e) {
@@ -408,6 +425,12 @@ export default function MapViewComponent({ location, weather }: Props) {
               else poiGroup.removeLayer(m);
             });
           });
+        });
+
+        toggleBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          poiFilterOpen = !poiFilterOpen;
+          filterList.style.display = poiFilterOpen ? 'block' : 'none';
         });
 
         L.DomEvent.disableClickPropagation(container);
@@ -436,24 +459,41 @@ export default function MapViewComponent({ location, weather }: Props) {
         .bindPopup('<b>' + p.label + '</b>');
     });
 
-    // 범례
-    var Legend = L.Control.extend({
-      options: { position: 'bottomleft' },
+    // 범례 (접이식, 우측 하단)
+    var legendOpen = false;
+    var LegendControl = L.Control.extend({
+      options: { position: 'bottomright' },
       onAdd: function() {
-        var div = L.DomUtil.create('div', 'weather-control');
-        div.style.fontSize = '11px';
-        div.style.lineHeight = '1.8';
-        div.innerHTML = ''
-          + '<div><span style="display:inline-block;width:10px;height:10px;background:#2D6A4F;border-radius:50%;margin-right:6px;vertical-align:middle;"></span>내 위치</div>'
+        var container = L.DomUtil.create('div', 'weather-control');
+        container.style.fontSize = '11px';
+        container.style.cursor = 'pointer';
+        container.style.marginBottom = '60px';
+
+        var toggleBtn = L.DomUtil.create('div', '', container);
+        toggleBtn.innerHTML = '<b>&#127758; 범례</b>';
+        toggleBtn.style.padding = '2px 0';
+
+        var legendBody = L.DomUtil.create('div', '', container);
+        legendBody.style.display = 'none';
+        legendBody.style.marginTop = '6px';
+        legendBody.style.lineHeight = '1.8';
+        legendBody.innerHTML = ''
           + '<div><span style="display:inline-block;width:16px;height:3px;background:#E76F51;margin-right:6px;vertical-align:middle;border-radius:2px;"></span>등산로</div>'
-          + '<div><span style="display:inline-block;width:16px;height:2px;background:#E9967A;margin-right:6px;vertical-align:middle;border-radius:2px;border-top:2px dashed #E9967A;"></span>산책로</div>'
+          + '<div><span style="display:inline-block;width:16px;height:2px;border-top:2px dashed #E9967A;margin-right:6px;vertical-align:middle;"></span>산책로</div>'
           + '<div><span style="display:inline-block;width:16px;height:3px;background:#F4A261;margin-right:6px;vertical-align:middle;border-radius:2px;"></span>보행자거리</div>'
-          + '<div><span style="margin-right:6px;">📸</span>포토스팟</div>'
-          + '<div style="margin-top:3px;border-top:1px solid #eee;padding-top:3px;"><span style="margin-right:4px;">&#9749;</span>카페 <span style="margin-right:4px;margin-left:6px;">&#128701;</span>화장실</div>';
-        return div;
+          + '<div><span style="display:inline-block;width:16px;height:2px;border-top:2px dashed #DDA0A0;margin-right:6px;vertical-align:middle;"></span>오솔길</div>';
+
+        toggleBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          legendOpen = !legendOpen;
+          legendBody.style.display = legendOpen ? 'block' : 'none';
+        });
+
+        L.DomEvent.disableClickPropagation(container);
+        return container;
       }
     });
-    new Legend().addTo(map);
+    new LegendControl().addTo(map);
   </script>
 </body>
 </html>`;
