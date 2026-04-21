@@ -74,12 +74,25 @@ export default function MapViewComponent({ location, weather }: Props) {
       font-size: 10px;
       color: #C7C7C7;
     }
+    .trail-popup .tp-comment {
+      font-size: 11px;
+      color: #555;
+      margin-top: 6px;
+      padding-top: 5px;
+      border-top: 1px solid #f0f0f0;
+      line-height: 1.4;
+      font-style: italic;
+    }
+    .trail-popup .tp-commenter {
+      font-weight: 600;
+      font-style: normal;
+      color: #2D6A4F;
+      font-size: 10px;
+    }
     .trail-popup .tp-surface {
       font-size: 10px;
       color: #aaa;
-      margin-top: 2px;
-      padding-top: 3px;
-      border-top: 1px solid #f0f0f0;
+      margin-top: 3px;
     }
     .leaflet-popup-content-wrapper {
       border-radius: 12px !important;
@@ -200,38 +213,66 @@ export default function MapViewComponent({ location, weather }: Props) {
             lineJoin: 'round',
           }).addTo(trailGroup);
 
-          // 이름 있으면 평점 포함 팝업
-          if (trail.name) {
-            var catLabel = { hiking: '등산로', footway: '산책로', pedestrian: '보행자거리', path: '오솔길' };
-            // 랜덤 평점 생성 (실제 API 연동 전 시드 기반 더미)
-            var hash = 0;
-            for (var ci = 0; ci < trail.name.length; ci++) {
-              hash = ((hash << 5) - hash) + trail.name.charCodeAt(ci);
-              hash |= 0;
-            }
-            var rating = 3.0 + (Math.abs(hash) % 20) / 10.0; // 3.0~5.0
-            rating = Math.min(rating, 5.0);
-            var ratingStr = rating.toFixed(1);
-            var reviews = 5 + (Math.abs(hash) % 95);
+          // 모든 산책로에 리뷰 스타일 팝업
+          var catLabel = { hiking: '등산로', footway: '산책로', pedestrian: '보행자거리', path: '오솔길' };
+          var trailName = trail.name || (catLabel[trail.category] || '산책로') + ' ' + (trail.id ? trail.id.toString().slice(-4) : '');
 
-            var fullStars = Math.floor(rating);
-            var halfStar = (rating - fullStars) >= 0.5;
-            var starsHtml = '';
-            for (var si = 0; si < 5; si++) {
-              if (si < fullStars) starsHtml += '<span class="tp-star">&#9733;</span>';
-              else if (si === fullStars && halfStar) starsHtml += '<span class="tp-star">&#9733;</span>';
-              else starsHtml += '<span class="tp-star-empty">&#9733;</span>';
-            }
-
-            var popup = '<div class="trail-popup">'
-              + '<div class="tp-name">' + trail.name + '</div>'
-              + '<div class="tp-cat">' + (catLabel[trail.category] || trail.type) + '</div>'
-              + '<div class="tp-stars">' + starsHtml + '<span class="tp-score">' + ratingStr + '</span></div>'
-              + '<div class="tp-reviews">리뷰 ' + reviews + '개</div>'
-              + (trail.surface ? '<div class="tp-surface">노면: ' + trail.surface + '</div>' : '')
-              + '</div>';
-            line.bindPopup(popup, { maxWidth: 200, closeButton: false });
+          // 시드 기반 더미 평점/리뷰
+          var seed = trailName + (trail.category || '');
+          var hash = 0;
+          for (var ci = 0; ci < seed.length; ci++) {
+            hash = ((hash << 5) - hash) + seed.charCodeAt(ci);
+            hash |= 0;
           }
+          var rating = 3.0 + (Math.abs(hash) % 21) / 10.0;
+          rating = Math.min(rating, 5.0);
+          var ratingStr = rating.toFixed(1);
+          var reviews = 3 + (Math.abs(hash) % 120);
+
+          // 더미 한줄평 (시드 기반 선택)
+          var comments = [
+            '경치가 좋고 걷기 편해요',
+            '조용해서 산책하기 딱이에요',
+            '그늘이 많아 여름에도 좋아요',
+            '오르막이 좀 있지만 뷰가 최고',
+            '아이들과 함께 걷기 좋아요',
+            '단풍철에 정말 예뻐요',
+            '야간 조명이 있어서 밤산책 가능',
+            '주말에 사람이 좀 많아요',
+            '벤치가 군데군데 있어서 쉬기 좋아요',
+            '자전거 주의! 가끔 빠르게 지나가요',
+          ];
+          var comment = comments[Math.abs(hash) % comments.length];
+          var commenter = ['산책러', '동네주민', '걷기좋아', '주말탐험', '힐링중', '자연인'][Math.abs(hash >> 4) % 6];
+
+          var fullStars = Math.floor(rating);
+          var halfStar = (rating - fullStars) >= 0.5;
+          var starsHtml = '';
+          for (var si = 0; si < 5; si++) {
+            if (si < fullStars) starsHtml += '<span class="tp-star">&#9733;</span>';
+            else if (si === fullStars && halfStar) starsHtml += '<span class="tp-star">&#9733;</span>';
+            else starsHtml += '<span class="tp-star-empty">&#9733;</span>';
+          }
+
+          var popup = '<div class="trail-popup">'
+            + '<div class="tp-name">' + trailName + '</div>'
+            + '<div class="tp-cat">' + (catLabel[trail.category] || trail.type || '산책로') + '</div>'
+            + '<div class="tp-stars">' + starsHtml + '<span class="tp-score">' + ratingStr + '</span></div>'
+            + '<div class="tp-reviews">리뷰 ' + reviews + '개</div>'
+            + '<div class="tp-comment">'
+            + '<span class="tp-commenter">' + commenter + '</span> "' + comment + '"'
+            + '</div>'
+            + (trail.surface ? '<div class="tp-surface">노면: ' + trail.surface + '</div>' : '')
+            + '</div>';
+          line.bindPopup(popup, { maxWidth: 220, closeButton: false });
+
+          // 호버 시 강조
+          line.on('mouseover', function(e) {
+            e.target.setStyle({ weight: style.weight + 3, opacity: 1 });
+          });
+          line.on('mouseout', function(e) {
+            e.target.setStyle({ weight: style.weight, opacity: style.opacity });
+          });
         });
 
         // 카운트 표시용 콘솔
