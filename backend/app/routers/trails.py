@@ -11,6 +11,7 @@ from ..collectors.trail_collector import (
     search_walking_trails,
 )
 from ..collectors.osm_trail_collector import get_osm_trails
+from ..collectors.poi_collector import get_nearby_pois, POI_CATEGORIES
 from ..collectors.weather_collector import get_current_weather, latlon_to_grid
 from ..collectors.air_quality_collector import get_realtime_air_quality
 
@@ -74,6 +75,34 @@ async def nearby_paths(
         "status": "ok",
         "data": result["trails"],
         "count": result["count"],
+    }
+
+
+@router.get("/nearby-pois")
+async def nearby_pois(
+    lat: float = Query(..., description="위도"),
+    lng: float = Query(..., description="경도"),
+    radius: int = Query(1000, description="검색 반경 (m), 최대 3000"),
+    categories: Optional[str] = Query(
+        None,
+        description="카테고리 필터 (쉼표 구분: cafe,toilet,convenience,bench,drinking_water,parking,restaurant,pharmacy)",
+    ),
+):
+    """OSM 기반 주변 편의시설(SOC) 조회"""
+    radius = min(radius, 3000)
+    cat_list = None
+    if categories:
+        cat_list = [c.strip() for c in categories.split(",") if c.strip() in POI_CATEGORIES]
+
+    result = await get_nearby_pois(lat, lng, radius, cat_list or None)
+    if not result:
+        return {"status": "ok", "data": [], "count": 0, "categories": {}}
+
+    return {
+        "status": "ok",
+        "data": result["pois"],
+        "count": result["count"],
+        "categories": result["categories"],
     }
 
 

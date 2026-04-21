@@ -282,6 +282,118 @@ export default function MapViewComponent({ location, weather }: Props) {
         console.log('OSM trail fetch error:', e);
       });
 
+    // === 편의시설(SOC) 마커 ===
+    var poiIcons = {
+      cafe:           { emoji: '&#9749;',  color: '#8B4513' },
+      toilet:         { emoji: '&#128701;', color: '#4A90D9' },
+      convenience:    { emoji: '&#127915;', color: '#FF6B35' },
+      bench:          { emoji: '&#129691;', color: '#8B7355' },
+      drinking_water: { emoji: '&#128167;', color: '#00BFFF' },
+      parking:        { emoji: '&#127359;', color: '#666666' },
+      restaurant:     { emoji: '&#127860;', color: '#E74C3C' },
+      pharmacy:       { emoji: '&#9769;',   color: '#27AE60' },
+    };
+
+    var poiLayers = {};
+    var poiGroup = L.layerGroup().addTo(map);
+
+    fetch('${API_BASE}/api/v1/trails/nearby-pois?lat=' + lat + '&lng=' + lng + '&radius=1500')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.data || data.data.length === 0) return;
+
+        data.data.forEach(function(poi) {
+          var iconInfo = poiIcons[poi.category] || { emoji: '&#128204;', color: '#999' };
+
+          var icon = L.divIcon({
+            className: '',
+            html: '<div style="'
+              + 'width:26px;height:26px;'
+              + 'background:white;'
+              + 'border:2px solid ' + iconInfo.color + ';'
+              + 'border-radius:50%;'
+              + 'display:flex;align-items:center;justify-content:center;'
+              + 'font-size:13px;'
+              + 'box-shadow:0 1px 4px rgba(0,0,0,0.15);'
+              + '">' + iconInfo.emoji + '</div>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13],
+          });
+
+          var marker = L.marker([poi.lat, poi.lng], { icon: icon }).addTo(poiGroup);
+
+          var popupHtml = '<div class="trail-popup" style="min-width:120px;">'
+            + '<div class="tp-name">' + poi.name + '</div>'
+            + '<div class="tp-cat">' + poi.label + '</div>'
+            + (poi.opening_hours ? '<div class="tp-surface">' + poi.opening_hours + '</div>' : '')
+            + (poi.wheelchair === 'yes' ? '<div class="tp-surface" style="color:#2D6A4F;">&#9855; 휠체어 접근 가능</div>' : '')
+            + '</div>';
+          marker.bindPopup(popupHtml, { maxWidth: 180, closeButton: false });
+
+          // 레이어 그룹별 관리
+          if (!poiLayers[poi.category]) poiLayers[poi.category] = [];
+          poiLayers[poi.category].push(marker);
+        });
+
+        console.log('POIs loaded:', data.count, data.categories);
+      })
+      .catch(function(e) {
+        console.log('POI fetch error:', e);
+      });
+
+    // POI 필터 컨트롤
+    var poiLabels = {
+      cafe: '카페', toilet: '화장실', convenience: '편의점',
+      bench: '벤치', drinking_water: '음수대', parking: '주차장',
+      restaurant: '음식점', pharmacy: '약국'
+    };
+    var poiVisible = {};
+
+    var PoiFilter = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd: function() {
+        var container = L.DomUtil.create('div', 'weather-control');
+        container.style.marginTop = '50px';
+        container.style.fontSize = '11px';
+        container.style.maxWidth = '110px';
+        container.style.cursor = 'pointer';
+
+        var title = L.DomUtil.create('div', '', container);
+        title.innerHTML = '<b style="font-size:12px;">편의시설</b>';
+        title.style.marginBottom = '6px';
+        title.style.borderBottom = '1px solid #eee';
+        title.style.paddingBottom = '4px';
+
+        Object.keys(poiIcons).forEach(function(cat) {
+          poiVisible[cat] = true;
+          var row = L.DomUtil.create('div', '', container);
+          row.style.padding = '2px 0';
+          row.style.display = 'flex';
+          row.style.alignItems = 'center';
+          row.style.gap = '4px';
+          row.dataset.cat = cat;
+          row.innerHTML = '<span style="font-size:13px;">' + poiIcons[cat].emoji + '</span>'
+            + '<span>' + (poiLabels[cat] || cat) + '</span>';
+
+          row.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var c = this.dataset.cat;
+            poiVisible[c] = !poiVisible[c];
+            this.style.opacity = poiVisible[c] ? '1' : '0.35';
+            (poiLayers[c] || []).forEach(function(m) {
+              if (poiVisible[c]) poiGroup.addLayer(m);
+              else poiGroup.removeLayer(m);
+            });
+          });
+        });
+
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.disableScrollPropagation(container);
+        return container;
+      }
+    });
+    new PoiFilter().addTo(map);
+
     // 더미 커뮤니티 핀
     var photoIcon = L.divIcon({
       className: '',
@@ -313,7 +425,8 @@ export default function MapViewComponent({ location, weather }: Props) {
           + '<div><span style="display:inline-block;width:16px;height:3px;background:#E76F51;margin-right:6px;vertical-align:middle;border-radius:2px;"></span>등산로</div>'
           + '<div><span style="display:inline-block;width:16px;height:2px;background:#E9967A;margin-right:6px;vertical-align:middle;border-radius:2px;border-top:2px dashed #E9967A;"></span>산책로</div>'
           + '<div><span style="display:inline-block;width:16px;height:3px;background:#F4A261;margin-right:6px;vertical-align:middle;border-radius:2px;"></span>보행자거리</div>'
-          + '<div><span style="margin-right:6px;">📸</span>포토스팟</div>';
+          + '<div><span style="margin-right:6px;">📸</span>포토스팟</div>'
+          + '<div style="margin-top:3px;border-top:1px solid #eee;padding-top:3px;"><span style="margin-right:4px;">&#9749;</span>카페 <span style="margin-right:4px;margin-left:6px;">&#128701;</span>화장실</div>';
         return div;
       }
     });
