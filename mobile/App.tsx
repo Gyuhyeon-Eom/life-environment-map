@@ -10,6 +10,7 @@ import {
   Dimensions,
   Animated,
   PanResponder,
+  TextInput,
 } from "react-native";
 import * as Location from "expo-location";
 import { useEffect, useState, useRef } from "react";
@@ -30,6 +31,12 @@ const SHEET_FULL = SCREEN_HEIGHT * 0.85 - TAB_BAR_HEIGHT; // 탭바 위까지만
 
 type TabType = "home" | "trail" | "bloom" | "photo" | "friends";
 type ViewType = "main" | "trail-list" | "trail-detail";
+
+type SearchResult = {
+  lat: string;
+  lon: string;
+  display_name: string;
+};
 
 type WeatherData = {
   temperature?: number;
@@ -97,6 +104,10 @@ export default function App() {
   const [currentView, setCurrentView] = useState<ViewType>("main");
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -199,6 +210,38 @@ export default function App() {
     })
   ).current;
 
+  const handleSearch = (text: string) => {
+    setSearchQuery(text);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (text.length < 2) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const resp = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(text)}&countrycodes=kr&limit=5&accept-language=ko`,
+          { headers: { "User-Agent": "LifeEnvMap/1.0" } }
+        );
+        const data = await resp.json();
+        setSearchResults(data || []);
+        setShowSearchResults(data && data.length > 0);
+      } catch (e) {
+        console.log("Search error:", e);
+      }
+    }, 400);
+  };
+
+  const handleSelectPlace = (result: SearchResult) => {
+    const newLat = parseFloat(result.lat);
+    const newLng = parseFloat(result.lon);
+    setLocation({ latitude: newLat, longitude: newLng });
+    setSearchQuery(result.display_name.split(",")[0]);
+    setShowSearchResults(false);
+    setSearchResults([]);
+  };
+
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
     setCurrentView("main");
@@ -259,6 +302,53 @@ export default function App() {
                 <Text style={styles.weatherChipInfo}>
                   {weather.humidity}%
                 </Text>
+              </View>
+            )}
+          </View>
+
+          {/* 검색바 — 헤더 바로 아래 */}
+          <View style={styles.searchBarContainer}>
+            <View style={styles.searchBarInner}>
+              <Text style={styles.searchIcon}>&#128269;</Text>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="장소 검색 (한강, 여의도, 북촌...)"
+                placeholderTextColor="#C7C7C7"
+                value={searchQuery}
+                onChangeText={handleSearch}
+                onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSearchQuery("");
+                    setSearchResults([]);
+                    setShowSearchResults(false);
+                  }}
+                  style={styles.searchClear}
+                >
+                  <Text style={styles.searchClearText}>&#10005;</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {showSearchResults && searchResults.length > 0 && (
+              <View style={styles.searchResultsBox}>
+                {searchResults.map((r, i) => {
+                  const parts = r.display_name.split(",");
+                  const name = parts[0].trim();
+                  const addr = parts.slice(1, 3).join(",").trim();
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      style={styles.searchResultItem}
+                      onPress={() => handleSelectPlace(r)}
+                    >
+                      <Text style={styles.searchResultName}>{name}</Text>
+                      <Text style={styles.searchResultAddr} numberOfLines={1}>{addr}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </View>
@@ -580,6 +670,73 @@ const styles = StyleSheet.create({
   weatherChipInfo: {
     fontSize: 12,
     color: colors.textSecondary,
+  },
+  // 검색바
+  searchBarContainer: {
+    position: "absolute",
+    top: 100,
+    left: 16,
+    right: 16,
+    zIndex: 11,
+  },
+  searchBarInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderRadius: 24,
+    paddingHorizontal: 14,
+    height: 42,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  searchIcon: {
+    fontSize: 14,
+    marginRight: 8,
+    color: colors.textSecondary,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.text,
+    paddingVertical: 0,
+  },
+  searchClear: {
+    padding: 4,
+    marginLeft: 4,
+  },
+  searchClearText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  searchResultsBox: {
+    marginTop: 6,
+    backgroundColor: "white",
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+    overflow: "hidden",
+  },
+  searchResultItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#f0f0f0",
+  },
+  searchResultName: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  searchResultAddr: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   // 드래그 바텀시트
   bottomSheet: {
