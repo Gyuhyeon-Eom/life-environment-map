@@ -185,7 +185,7 @@ export default function WalkScoreCard({ latitude, longitude }: Props) {
 
   return (
     <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
-      <TouchableOpacity onPress={toggleExpand} activeOpacity={0.8}>
+      <TouchableOpacity onPress={toggleExpand} activeOpacity={0.8} onStartShouldSetResponder={() => true}>
         {/* 헤더 */}
         <View style={styles.header}>
           <View>
@@ -199,8 +199,8 @@ export default function WalkScoreCard({ latitude, longitude }: Props) {
               style={[styles.scoreText, { color: config.color }]}
             >
               {scoreAnim.interpolate({
-                inputRange: [0, 100],
-                outputRange: ["0", "100"],
+                inputRange: Array.from({ length: 101 }, (_, i) => i),
+                outputRange: Array.from({ length: 101 }, (_, i) => i.toFixed(0)),
                 extrapolate: "clamp",
               })}
             </Animated.Text>
@@ -235,7 +235,7 @@ export default function WalkScoreCard({ latitude, longitude }: Props) {
                 {formatTime(best_time.best_time)}
               </Text>
               <Text style={styles.bestTimeScore}>
-                {best_time.best_score}점
+                {typeof best_time.best_score === "number" ? best_time.best_score.toFixed(0) : best_time.best_score}점
               </Text>
             </View>
           )}
@@ -269,7 +269,7 @@ export default function WalkScoreCard({ latitude, longitude }: Props) {
                     {BREAKDOWN_LABELS[key] || key}
                   </Text>
                   <Text style={styles.breakdownValue}>
-                    {info.value}
+                    {typeof info.value === "number" ? (Number.isInteger(info.value) ? info.value : info.value.toFixed(2)) : info.value}
                     {BREAKDOWN_UNITS[key]}
                   </Text>
                 </View>
@@ -281,7 +281,7 @@ export default function WalkScoreCard({ latitude, longitude }: Props) {
                     ]}
                   />
                 </View>
-                <Text style={styles.breakdownScore}>{info.score}</Text>
+                <Text style={styles.breakdownScore}>{typeof info.score === "number" ? info.score.toFixed(0) : info.score}</Text>
               </View>
             );
           })}
@@ -332,11 +332,16 @@ export default function WalkScoreCard({ latitude, longitude }: Props) {
       )}
 
       {/* 펼침 힌트 */}
-      <View style={styles.expandHint}>
+      <TouchableOpacity
+        onPress={toggleExpand}
+        style={styles.expandHint}
+        activeOpacity={0.6}
+        onStartShouldSetResponder={() => true}
+      >
         <Text style={styles.expandHintText}>
-          {expanded ? "접기" : "상세보기"}
+          {expanded ? "▲ 접기" : "▼ 상세보기"}
         </Text>
-      </View>
+      </TouchableOpacity>
     </Animated.View>
   );
 }
