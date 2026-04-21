@@ -402,7 +402,7 @@ export default function MapViewComponent({ location, weather }: Props) {
       onAdd: function() {
         var wrapper = L.DomUtil.create('div', '');
         wrapper.style.position = 'relative';
-        wrapper.style.marginTop = '110px';
+        wrapper.style.marginTop = '36px';
 
         // 플로팅 버튼
         var btn = L.DomUtil.create('div', 'weather-control', wrapper);

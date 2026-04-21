@@ -296,17 +296,20 @@ export default function App() {
                 <Text style={styles.logoSub}>오늘도 한 걸음</Text>
               </View>
             </View>
-            {weather && (
-              <View style={styles.weatherChip}>
-                <Text style={styles.weatherChipTemp}>
-                  {weather.temperature?.toFixed(0)}°
-                </Text>
-                <View style={styles.weatherChipDivider} />
-                <Text style={styles.weatherChipInfo}>
-                  {weather.humidity}%
-                </Text>
-              </View>
-            )}
+            <View style={styles.headerRight}>
+              <StepTracker layout="header" />
+              {weather && (
+                <View style={styles.weatherChip}>
+                  <Text style={styles.weatherChipTemp}>
+                    {weather.temperature?.toFixed(0)}°
+                  </Text>
+                  <View style={styles.weatherChipDivider} />
+                  <Text style={styles.weatherChipInfo}>
+                    {weather.humidity}%
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
 
           {/* 검색바 — 헤더 바로 아래 */}
@@ -359,8 +362,7 @@ export default function App() {
           {/* 지도 풀스크린 */}
           <MapViewComponent location={location} weather={weather} />
 
-          {/* 걸음수 + 코인 HUD */}
-          <StepTracker />
+
 
           {/* 사진 촬영 FAB (좌측 하단) */}
           <TouchableOpacity
@@ -625,6 +627,11 @@ const styles = StyleSheet.create({
     marginTop: 1,
     letterSpacing: 0.5,
   },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   weatherChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -655,7 +662,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 100,
     left: 16,
-    right: 80,
+    right: 110,
     zIndex: 11,
   },
   searchBarInner: {

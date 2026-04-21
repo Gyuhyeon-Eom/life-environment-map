@@ -15,9 +15,10 @@ try {
 
 type Props = {
   visible?: boolean;
+  layout?: "floating" | "header";
 };
 
-export default function StepTracker({ visible = true }: Props) {
+export default function StepTracker({ visible = true, layout = "floating" }: Props) {
   const [coins, setCoins] = useState(0);
   const [todaySteps, setTodaySteps] = useState(0);
   const [coinPop, setCoinPop] = useState(false);
@@ -89,15 +90,29 @@ export default function StepTracker({ visible = true }: Props) {
   const stepsToNextCoin = 100 - (todaySteps % 100);
   const progressPercent = ((todaySteps % 100) / 100) * 100;
 
+  // 헤더 인라인 모드
+  if (layout === "header") {
+    return (
+      <View style={styles.headerContainer}>
+        <View style={styles.headerChip}>
+          <Text style={styles.headerCoinIcon}>&#11044;</Text>
+          <Text style={styles.headerCoinText}>{coins.toLocaleString()}</Text>
+        </View>
+        <View style={styles.headerChip}>
+          <Text style={styles.headerStepIcon}>&#128099;</Text>
+          <Text style={styles.headerStepText}>{todaySteps.toLocaleString()}</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // 플로팅 모드 (기존)
   return (
     <View style={styles.container}>
-      {/* 코인 뱃지 */}
       <View style={styles.coinBadge}>
         <Text style={styles.coinIcon}>&#11044;</Text>
         <Text style={styles.coinCount}>{coins.toLocaleString()}</Text>
       </View>
-
-      {/* 걸음수 */}
       <View style={styles.stepBadge}>
         <Text style={styles.stepIcon}>&#128099;</Text>
         <View style={styles.stepInfo}>
@@ -108,8 +123,6 @@ export default function StepTracker({ visible = true }: Props) {
           <Text style={styles.stepHint}>다음 코인까지 {stepsToNextCoin}걸음</Text>
         </View>
       </View>
-
-      {/* 코인 획득 팝업 */}
       {coinPop && (
         <Animated.View
           style={[
@@ -135,6 +148,40 @@ export default function StepTracker({ visible = true }: Props) {
 }
 
 const styles = StyleSheet.create({
+  // 헤더 인라인 모드
+  headerContainer: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  headerChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.8)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 3,
+    borderWidth: 1,
+    borderColor: "#f0f0f0",
+  },
+  headerCoinIcon: {
+    fontSize: 10,
+    color: "#FFD700",
+  },
+  headerCoinText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#B8860B",
+  },
+  headerStepIcon: {
+    fontSize: 12,
+  },
+  headerStepText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#262626",
+  },
+  // 플로팅 모드
   container: {
     position: "absolute",
     bottom: 90,
