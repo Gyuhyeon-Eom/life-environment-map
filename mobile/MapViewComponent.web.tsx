@@ -363,97 +363,90 @@ export default function MapViewComponent({ location, weather }: Props) {
     // 초기 로드
     loadPOIs(lat, lng);
 
-    // === 통합 컨트롤 패널 (좌측 하단) ===
+    // === 산책로 범례 (상단 좌측, 검색바 아래) ===
+    var TrailLegend = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd: function() {
+        var container = L.DomUtil.create('div', 'weather-control');
+        container.style.fontSize = '10px';
+        container.style.marginTop = '110px';
+        container.style.padding = '6px 10px';
+        container.style.display = 'flex';
+        container.style.gap = '8px';
+        container.style.alignItems = 'center';
+        container.style.flexWrap = 'wrap';
+
+        container.innerHTML = ''
+          + '<span><span style="display:inline-block;width:12px;height:3px;background:#E76F51;vertical-align:middle;border-radius:2px;margin-right:3px;"></span>등산로</span>'
+          + '<span><span style="display:inline-block;width:12px;border-top:2px dashed #E9967A;vertical-align:middle;margin-right:3px;"></span>산책로</span>'
+          + '<span><span style="display:inline-block;width:12px;height:3px;background:#F4A261;vertical-align:middle;border-radius:2px;margin-right:3px;"></span>보행자</span>'
+          + '<span><span style="display:inline-block;width:12px;border-top:2px dashed #DDA0A0;vertical-align:middle;margin-right:3px;"></span>오솔길</span>';
+
+        L.DomEvent.disableClickPropagation(container);
+        return container;
+      }
+    });
+    new TrailLegend().addTo(map);
+
+    // === 편의시설 필터 (플로팅 버튼 + 팝업) ===
     var poiLabels = {
       cafe: '카페', toilet: '화장실', convenience: '편의점',
       bench: '벤치', drinking_water: '음수대', parking: '주차장',
       restaurant: '음식점', pharmacy: '약국'
     };
     var poiVisible = {};
+    var poiPanelOpen = false;
 
-    var MapPanel = L.Control.extend({
-      options: { position: 'bottomleft' },
+    var PoiButton = L.Control.extend({
+      options: { position: 'topright' },
       onAdd: function() {
-        var container = L.DomUtil.create('div', 'weather-control');
-        container.style.fontSize = '11px';
-        container.style.maxWidth = '130px';
-        container.style.lineHeight = '1.6';
-        container.style.marginBottom = '10px';
+        var wrapper = L.DomUtil.create('div', '');
+        wrapper.style.position = 'relative';
+        wrapper.style.marginTop = '110px';
 
-        // --- 산책로 범례 (항상 보임) ---
-        var trailSection = L.DomUtil.create('div', '', container);
-        trailSection.innerHTML = '<b style="font-size:11px;">산책로</b>';
-        trailSection.style.marginBottom = '4px';
+        // 플로팅 버튼
+        var btn = L.DomUtil.create('div', 'weather-control', wrapper);
+        btn.style.padding = '8px 12px';
+        btn.style.cursor = 'pointer';
+        btn.style.fontSize = '12px';
+        btn.style.fontWeight = '700';
+        btn.style.display = 'flex';
+        btn.style.alignItems = 'center';
+        btn.style.gap = '4px';
+        btn.innerHTML = '&#9881; 편의시설';
 
-        var trailItems = L.DomUtil.create('div', '', container);
-        trailItems.innerHTML = ''
-          + '<div><span style="display:inline-block;width:14px;height:3px;background:#E76F51;margin-right:5px;vertical-align:middle;border-radius:2px;"></span>등산로</div>'
-          + '<div><span style="display:inline-block;width:14px;border-top:2px dashed #E9967A;margin-right:5px;vertical-align:middle;"></span>산책로</div>'
-          + '<div><span style="display:inline-block;width:14px;height:3px;background:#F4A261;margin-right:5px;vertical-align:middle;border-radius:2px;"></span>보행자거리</div>'
-          + '<div><span style="display:inline-block;width:14px;border-top:2px dashed #DDA0A0;margin-right:5px;vertical-align:middle;"></span>오솔길</div>';
-
-        // --- 구분선 ---
-        var divider = L.DomUtil.create('div', '', container);
-        divider.style.borderTop = '1px solid #eee';
-        divider.style.margin = '6px 0';
-
-        // --- 편의시설 (아이콘 그리드 + 토글) ---
-        var poiHeader = L.DomUtil.create('div', '', container);
-        poiHeader.innerHTML = '<b style="font-size:11px;cursor:pointer;">편의시설 ▼</b>';
-        poiHeader.style.marginBottom = '4px';
-
-        // 컴팩트 아이콘 행 (항상 보임)
-        var poiPreview = L.DomUtil.create('div', '', container);
-        poiPreview.style.display = 'flex';
-        poiPreview.style.flexWrap = 'wrap';
-        poiPreview.style.gap = '2px';
-
-        var poiDetail = L.DomUtil.create('div', '', container);
-        poiDetail.style.display = 'none';
-        poiDetail.style.marginTop = '4px';
-
-        var poiDetailOpen = false;
+        // 팝업 패널
+        var panel = L.DomUtil.create('div', 'weather-control', wrapper);
+        panel.style.display = 'none';
+        panel.style.position = 'absolute';
+        panel.style.top = '40px';
+        panel.style.right = '0';
+        panel.style.minWidth = '140px';
+        panel.style.padding = '10px 12px';
+        panel.style.fontSize = '12px';
+        panel.style.zIndex = '1000';
+        panel.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)';
 
         Object.keys(poiIcons).forEach(function(cat) {
           poiVisible[cat] = true;
-
-          // 프리뷰 아이콘 (작은 원)
-          var miniIcon = L.DomUtil.create('span', '', poiPreview);
-          miniIcon.innerHTML = poiIcons[cat].emoji;
-          miniIcon.style.fontSize = '12px';
-          miniIcon.style.cursor = 'pointer';
-          miniIcon.dataset.cat = cat;
-          miniIcon.title = poiLabels[cat];
-          miniIcon.addEventListener('click', function(e) {
-            e.stopPropagation();
-            var c = this.dataset.cat;
-            poiVisible[c] = !poiVisible[c];
-            this.style.opacity = poiVisible[c] ? '1' : '0.3';
-            (poiLayers[c] || []).forEach(function(m) {
-              if (poiVisible[c]) poiGroup.addLayer(m);
-              else poiGroup.removeLayer(m);
-            });
-          });
-
-          // 상세 행 (펼침 시)
-          var row = L.DomUtil.create('div', '', poiDetail);
+          var row = L.DomUtil.create('div', '', panel);
           row.style.display = 'flex';
           row.style.alignItems = 'center';
-          row.style.gap = '4px';
-          row.style.padding = '1px 0';
+          row.style.gap = '6px';
+          row.style.padding = '4px 0';
           row.style.cursor = 'pointer';
+          row.style.borderBottom = '1px solid #f5f5f5';
           row.dataset.cat = cat;
-          row.innerHTML = '<span style="font-size:12px;">' + poiIcons[cat].emoji + '</span>'
-            + '<span>' + poiLabels[cat] + '</span>';
+          row.innerHTML = '<span style="font-size:14px;">' + poiIcons[cat].emoji + '</span>'
+            + '<span style="flex:1;">' + poiLabels[cat] + '</span>'
+            + '<span class="poi-check" style="font-size:12px;color:#2D6A4F;">&#10003;</span>';
+
           row.addEventListener('click', function(e) {
             e.stopPropagation();
             var c = this.dataset.cat;
             poiVisible[c] = !poiVisible[c];
-            this.style.opacity = poiVisible[c] ? '1' : '0.35';
-            // 프리뷰 아이콘도 동기화
-            poiPreview.querySelectorAll('[data-cat="' + c + '"]').forEach(function(el) {
-              el.style.opacity = poiVisible[c] ? '1' : '0.3';
-            });
+            this.style.opacity = poiVisible[c] ? '1' : '0.4';
+            this.querySelector('.poi-check').style.visibility = poiVisible[c] ? 'visible' : 'hidden';
             (poiLayers[c] || []).forEach(function(m) {
               if (poiVisible[c]) poiGroup.addLayer(m);
               else poiGroup.removeLayer(m);
@@ -461,20 +454,24 @@ export default function MapViewComponent({ location, weather }: Props) {
           });
         });
 
-        poiHeader.addEventListener('click', function(e) {
+        btn.addEventListener('click', function(e) {
           e.stopPropagation();
-          poiDetailOpen = !poiDetailOpen;
-          poiDetail.style.display = poiDetailOpen ? 'block' : 'none';
-          poiPreview.style.display = poiDetailOpen ? 'none' : 'flex';
-          poiHeader.innerHTML = '<b style="font-size:11px;cursor:pointer;">편의시설 ' + (poiDetailOpen ? '&#9650;' : '&#9660;') + '</b>';
+          poiPanelOpen = !poiPanelOpen;
+          panel.style.display = poiPanelOpen ? 'block' : 'none';
         });
 
-        L.DomEvent.disableClickPropagation(container);
-        L.DomEvent.disableScrollPropagation(container);
-        return container;
+        // 지도 클릭 시 패널 닫기
+        map.on('click', function() {
+          poiPanelOpen = false;
+          panel.style.display = 'none';
+        });
+
+        L.DomEvent.disableClickPropagation(wrapper);
+        L.DomEvent.disableScrollPropagation(wrapper);
+        return wrapper;
       }
     });
-    new MapPanel().addTo(map);
+    new PoiButton().addTo(map);
 
     // 더미 커뮤니티 핀
     var photoIcon = L.divIcon({
@@ -495,7 +492,7 @@ export default function MapViewComponent({ location, weather }: Props) {
         .bindPopup('<b>' + p.label + '</b>');
     });
 
-    // 범례는 좌측 하단 통합 패널로 이동함 (위 MapPanel)
+
   </script>
 </body>
 </html>`;

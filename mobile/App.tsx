@@ -11,6 +11,7 @@ import {
   Animated,
   PanResponder,
   TextInput,
+  Alert,
 } from "react-native";
 import * as Location from "expo-location";
 import { useEffect, useState, useRef } from "react";
@@ -361,6 +362,15 @@ export default function App() {
           {/* 걸음수 + 코인 HUD */}
           <StepTracker />
 
+          {/* 사진 촬영 FAB (좌측 하단) */}
+          <TouchableOpacity
+            style={styles.cameraFab}
+            onPress={() => Alert.alert("사진 공유", "산책 사진을 찍어서 지도에 공유하세요!\n(곧 출시 예정)")}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.cameraFabIcon}>&#128247;</Text>
+          </TouchableOpacity>
+
           {/* 드래그 바텀시트 */}
           <Animated.View
             style={[styles.bottomSheet, { top: sheetY }]}
@@ -706,6 +716,29 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  // 카메라 FAB
+  cameraFab: {
+    position: "absolute",
+    bottom: 90,
+    left: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.white,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 12,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  cameraFabIcon: {
+    fontSize: 22,
   },
   // 드래그 바텀시트
   bottomSheet: {
