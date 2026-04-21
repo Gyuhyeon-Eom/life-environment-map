@@ -31,6 +31,67 @@ export default function MapViewComponent({ location, weather }: Props) {
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       line-height: 1.4;
     }
+    .trail-popup {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-width: 140px;
+      max-width: 180px;
+    }
+    .trail-popup .tp-name {
+      font-weight: 700;
+      font-size: 13px;
+      color: #262626;
+      margin-bottom: 3px;
+      line-height: 1.3;
+    }
+    .trail-popup .tp-cat {
+      font-size: 10px;
+      color: #8E8E8E;
+      margin-bottom: 5px;
+    }
+    .trail-popup .tp-stars {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      margin-bottom: 3px;
+    }
+    .trail-popup .tp-star {
+      color: #F4A261;
+      font-size: 12px;
+      letter-spacing: -1px;
+    }
+    .trail-popup .tp-star-empty {
+      color: #E0E0E0;
+      font-size: 12px;
+      letter-spacing: -1px;
+    }
+    .trail-popup .tp-score {
+      font-size: 11px;
+      font-weight: 700;
+      color: #2D6A4F;
+      margin-left: 2px;
+    }
+    .trail-popup .tp-reviews {
+      font-size: 10px;
+      color: #C7C7C7;
+    }
+    .trail-popup .tp-surface {
+      font-size: 10px;
+      color: #aaa;
+      margin-top: 2px;
+      padding-top: 3px;
+      border-top: 1px solid #f0f0f0;
+    }
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px !important;
+      padding: 0 !important;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.12) !important;
+    }
+    .leaflet-popup-content {
+      margin: 10px 12px !important;
+    }
+    .leaflet-popup-tip {
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
+    }
     .weather-temp {
       font-size: 20px;
       font-weight: 800;
@@ -139,15 +200,37 @@ export default function MapViewComponent({ location, weather }: Props) {
             lineJoin: 'round',
           }).addTo(trailGroup);
 
-          // 이름 있으면 팝업
+          // 이름 있으면 평점 포함 팝업
           if (trail.name) {
             var catLabel = { hiking: '등산로', footway: '산책로', pedestrian: '보행자거리', path: '오솔길' };
-            var popup = '<div style="font-family:-apple-system,sans-serif;">'
-              + '<div style="font-weight:700;font-size:13px;color:#262626;">' + trail.name + '</div>'
-              + '<div style="font-size:11px;color:#8E8E8E;margin-top:3px;">' + (catLabel[trail.category] || trail.type) + '</div>'
-              + (trail.surface ? '<div style="font-size:10px;color:#aaa;margin-top:2px;">노면: ' + trail.surface + '</div>' : '')
+            // 랜덤 평점 생성 (실제 API 연동 전 시드 기반 더미)
+            var hash = 0;
+            for (var ci = 0; ci < trail.name.length; ci++) {
+              hash = ((hash << 5) - hash) + trail.name.charCodeAt(ci);
+              hash |= 0;
+            }
+            var rating = 3.0 + (Math.abs(hash) % 20) / 10.0; // 3.0~5.0
+            rating = Math.min(rating, 5.0);
+            var ratingStr = rating.toFixed(1);
+            var reviews = 5 + (Math.abs(hash) % 95);
+
+            var fullStars = Math.floor(rating);
+            var halfStar = (rating - fullStars) >= 0.5;
+            var starsHtml = '';
+            for (var si = 0; si < 5; si++) {
+              if (si < fullStars) starsHtml += '<span class="tp-star">&#9733;</span>';
+              else if (si === fullStars && halfStar) starsHtml += '<span class="tp-star">&#9733;</span>';
+              else starsHtml += '<span class="tp-star-empty">&#9733;</span>';
+            }
+
+            var popup = '<div class="trail-popup">'
+              + '<div class="tp-name">' + trail.name + '</div>'
+              + '<div class="tp-cat">' + (catLabel[trail.category] || trail.type) + '</div>'
+              + '<div class="tp-stars">' + starsHtml + '<span class="tp-score">' + ratingStr + '</span></div>'
+              + '<div class="tp-reviews">리뷰 ' + reviews + '개</div>'
+              + (trail.surface ? '<div class="tp-surface">노면: ' + trail.surface + '</div>' : '')
               + '</div>';
-            line.bindPopup(popup);
+            line.bindPopup(popup, { maxWidth: 200, closeButton: false });
           }
         });
 

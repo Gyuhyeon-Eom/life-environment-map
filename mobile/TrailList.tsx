@@ -243,8 +243,8 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     backgroundColor: colors.white,
-    borderRadius: radius.md,
-    marginBottom: 12,
+    borderRadius: radius.sm,
+    marginBottom: 10,
     overflow: "hidden",
     elevation: 1,
     shadowColor: "#000",
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   },
   cardImage: {
     width: "100%",
-    height: CARD_WIDTH,
+    height: CARD_WIDTH * 0.6,
   },
   noImage: {
     backgroundColor: colors.primaryBg,
@@ -279,17 +279,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   cardContent: {
-    padding: 10,
+    padding: 8,
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: colors.text,
-    marginBottom: 4,
-    lineHeight: 18,
+    marginBottom: 3,
+    lineHeight: 17,
   },
   cardAddress: {
-    fontSize: 11,
+    fontSize: 10,
     color: colors.textSecondary,
   },
   // 상태

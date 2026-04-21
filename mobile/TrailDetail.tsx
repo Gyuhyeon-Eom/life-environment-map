@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   // 히어로
   heroImage: {
     width: width,
-    height: width * 0.65,
+    height: width * 0.4,
     backgroundColor: "#f0f0f0",
   },
   noImage: {
@@ -259,19 +259,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
   },
   noImageEmoji: {
-    fontSize: 64,
+    fontSize: 42,
   },
   // 제목
   titleSection: {
-    padding: 20,
+    padding: 16,
     borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
   },
   title: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "800",
     color: colors.text,
-    marginBottom: 6,
+    marginBottom: 4,
     letterSpacing: -0.3,
   },
   address: {
@@ -280,10 +280,10 @@ const styles = StyleSheet.create({
   },
   // 날씨
   weatherCard: {
-    margin: 16,
-    padding: 16,
+    margin: 12,
+    padding: 12,
     backgroundColor: colors.primaryBg,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
   },
   weatherGrid: {
     flexDirection: "row",
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   weatherValue: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "800",
     color: colors.primary,
   },
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   },
   // 섹션
   section: {
-    padding: 20,
+    padding: 16,
     borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
   },
