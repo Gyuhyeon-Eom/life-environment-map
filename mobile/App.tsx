@@ -20,6 +20,7 @@ import TrailDetail from "./TrailDetail";
 import BloomList from "./BloomList";
 import WalkScoreCard from "./WalkScoreCard";
 import StepTracker from "./StepTracker";
+import CharacterShop from "./CharacterShop";
 import { colors, radius } from "./theme";
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -30,7 +31,7 @@ const SHEET_PEEK = 160;       // 쾌적도만 살짝 보이는 높이
 const SHEET_MID = SCREEN_HEIGHT * 0.5;  // 중간
 const SHEET_FULL = SCREEN_HEIGHT * 0.85 - TAB_BAR_HEIGHT; // 탭바 위까지만
 
-type TabType = "home" | "trail" | "bloom" | "photo" | "friends";
+type TabType = "home" | "trail" | "bloom" | "bear" | "friends";
 type ViewType = "main" | "trail-list" | "trail-detail";
 
 type SearchResult = {
@@ -454,45 +455,9 @@ export default function App() {
         </>
       )}
 
-      {/* ===== 사진공유 (준비중) ===== */}
-      {activeTab === "photo" && (
-        <>
-          <View style={styles.subHeader}>
-            <TouchableOpacity onPress={() => handleTabChange("home")} style={styles.headerBackBtn}>
-              <Text style={styles.headerBackText}>←</Text>
-            </TouchableOpacity>
-            <Text style={styles.subHeaderTitle}>사진 공유</Text>
-            <View style={{ width: 44 }} />
-          </View>
-          <View style={styles.comingSoonContainer}>
-            <Image source={require("./assets/icons/camera.jpg")} style={styles.comingSoonIcon} />
-            <Text style={styles.comingSoonTitle}>사진 공유</Text>
-            <Text style={styles.comingSoonText}>
-              산책하면서 찍은 사진을 장소와 함께 공유하세요
-            </Text>
-            <View style={styles.comingSoonFeatures}>
-              <View style={styles.featureItem}>
-                <Text style={styles.featureDot}>+</Text>
-                <Text style={styles.featureText}>사진 촬영 또는 갤러리에서 선택</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <Text style={styles.featureDot}>+</Text>
-                <Text style={styles.featureText}>장소 태그 자동 추가</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <Text style={styles.featureDot}>+</Text>
-                <Text style={styles.featureText}>해시태그로 분류</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <Text style={styles.featureDot}>+</Text>
-                <Text style={styles.featureText}>친구 지도에 사진 핀 표시</Text>
-              </View>
-            </View>
-            <View style={styles.comingSoonBadge}>
-              <Text style={styles.comingSoonBadgeText}>곧 출시 예정</Text>
-            </View>
-          </View>
-        </>
+      {/* ===== 곰돌이 꾸미기 (상점) ===== */}
+      {activeTab === "bear" && (
+        <CharacterShop onBack={() => handleTabChange("home")} />
       )}
 
       {/* ===== 친구 (준비중) ===== */}
@@ -563,10 +528,10 @@ export default function App() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.tabItem}
-          onPress={() => handleTabChange("photo")}
+          onPress={() => handleTabChange("bear")}
         >
-          <Image source={require("./assets/icons/camera.jpg")} style={styles.tabIconImg} />
-          <Text style={[styles.tabLabel, activeTab === "photo" && styles.tabLabelActive]}>사진공유</Text>
+          <Image source={require("./assets/mascot.jpg")} style={styles.tabIconImg} />
+          <Text style={[styles.tabLabel, activeTab === "bear" && styles.tabLabelActive]}>곰돌이</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.tabItem}
