@@ -388,90 +388,30 @@ export default function MapViewComponent({ location, weather }: Props) {
     });
     new TrailLegend().addTo(map);
 
-    // === 편의시설 필터 (플로팅 버튼 + 팝업) ===
+    // 편의시설 필터는 React Native 레이어로 이동 (App.tsx)
+    // iframe 내에서는 postMessage로 토글
     var poiLabels = {
       cafe: '카페', toilet: '화장실', convenience: '편의점',
       bench: '벤치', drinking_water: '음수대', parking: '주차장',
       restaurant: '음식점', pharmacy: '약국'
     };
     var poiVisible = {};
-    var poiPanelOpen = false;
+    Object.keys(poiIcons).forEach(function(cat) { poiVisible[cat] = true; });
 
-    var PoiButton = L.Control.extend({
-      options: { position: 'topright' },
-      onAdd: function() {
-        var wrapper = L.DomUtil.create('div', '');
-        wrapper.style.position = 'relative';
-        wrapper.style.marginTop = '36px';
-
-        // 플로팅 버튼
-        var btn = L.DomUtil.create('div', 'weather-control', wrapper);
-        btn.style.padding = '8px 12px';
-        btn.style.cursor = 'pointer';
-        btn.style.fontSize = '12px';
-        btn.style.fontWeight = '700';
-        btn.style.display = 'flex';
-        btn.style.alignItems = 'center';
-        btn.style.gap = '4px';
-        btn.innerHTML = '&#9881; 편의시설';
-
-        // 팝업 패널
-        var panel = L.DomUtil.create('div', 'weather-control', wrapper);
-        panel.style.display = 'none';
-        panel.style.position = 'absolute';
-        panel.style.top = '40px';
-        panel.style.right = '0';
-        panel.style.minWidth = '140px';
-        panel.style.padding = '10px 12px';
-        panel.style.fontSize = '12px';
-        panel.style.zIndex = '1000';
-        panel.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)';
-
-        Object.keys(poiIcons).forEach(function(cat) {
-          poiVisible[cat] = true;
-          var row = L.DomUtil.create('div', '', panel);
-          row.style.display = 'flex';
-          row.style.alignItems = 'center';
-          row.style.gap = '6px';
-          row.style.padding = '4px 0';
-          row.style.cursor = 'pointer';
-          row.style.borderBottom = '1px solid #f5f5f5';
-          row.dataset.cat = cat;
-          row.innerHTML = '<span style="font-size:14px;">' + poiIcons[cat].emoji + '</span>'
-            + '<span style="flex:1;">' + poiLabels[cat] + '</span>'
-            + '<span class="poi-check" style="font-size:12px;color:#2D6A4F;">&#10003;</span>';
-
-          row.addEventListener('click', function(e) {
-            e.stopPropagation();
-            var c = this.dataset.cat;
-            poiVisible[c] = !poiVisible[c];
-            this.style.opacity = poiVisible[c] ? '1' : '0.4';
-            this.querySelector('.poi-check').style.visibility = poiVisible[c] ? 'visible' : 'hidden';
-            (poiLayers[c] || []).forEach(function(m) {
-              if (poiVisible[c]) poiGroup.addLayer(m);
-              else poiGroup.removeLayer(m);
-            });
+    // RN에서 메시지 받아서 POI 토글
+    window.addEventListener('message', function(e) {
+      try {
+        var msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+        if (msg.type === 'togglePoi') {
+          var c = msg.category;
+          poiVisible[c] = !poiVisible[c];
+          (poiLayers[c] || []).forEach(function(m) {
+            if (poiVisible[c]) poiGroup.addLayer(m);
+            else poiGroup.removeLayer(m);
           });
-        });
-
-        btn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          poiPanelOpen = !poiPanelOpen;
-          panel.style.display = poiPanelOpen ? 'block' : 'none';
-        });
-
-        // 지도 클릭 시 패널 닫기
-        map.on('click', function() {
-          poiPanelOpen = false;
-          panel.style.display = 'none';
-        });
-
-        L.DomEvent.disableClickPropagation(wrapper);
-        L.DomEvent.disableScrollPropagation(wrapper);
-        return wrapper;
-      }
+        }
+      } catch(ex) {}
     });
-    new PoiButton().addTo(map);
 
     // 더미 커뮤니티 핀
     var photoIcon = L.divIcon({

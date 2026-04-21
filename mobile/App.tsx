@@ -110,6 +110,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [showPoiFilter, setShowPoiFilter] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -312,52 +313,90 @@ export default function App() {
             </View>
           </View>
 
-          {/* 검색바 — 헤더 바로 아래 */}
-          <View style={styles.searchBarContainer}>
-            <View style={styles.searchBarInner}>
-              <Text style={styles.searchIcon}>&#128269;</Text>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="장소 검색 (한강, 여의도, 북촌...)"
-                placeholderTextColor="#C7C7C7"
-                value={searchQuery}
-                onChangeText={handleSearch}
-                onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
-                returnKeyType="search"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => {
-                    setSearchQuery("");
-                    setSearchResults([]);
-                    setShowSearchResults(false);
-                  }}
-                  style={styles.searchClear}
-                >
-                  <Text style={styles.searchClearText}>&#10005;</Text>
-                </TouchableOpacity>
+          {/* 검색바 + 편의시설 버튼 — 헤더 바로 아래 */}
+          <View style={styles.searchRow}>
+            <View style={styles.searchBarContainer}>
+              <View style={styles.searchBarInner}>
+                <Text style={styles.searchIcon}>&#128269;</Text>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="장소 검색 (한강, 여의도...)"
+                  placeholderTextColor="#C7C7C7"
+                  value={searchQuery}
+                  onChangeText={handleSearch}
+                  onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+                  returnKeyType="search"
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSearchQuery("");
+                      setSearchResults([]);
+                      setShowSearchResults(false);
+                    }}
+                    style={styles.searchClear}
+                  >
+                    <Text style={styles.searchClearText}>&#10005;</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {showSearchResults && searchResults.length > 0 && (
+                <View style={styles.searchResultsBox}>
+                  {searchResults.map((r, i) => {
+                    const parts = r.display_name.split(",");
+                    const name = parts[0].trim();
+                    const addr = parts.slice(1, 3).join(",").trim();
+                    return (
+                      <TouchableOpacity
+                        key={i}
+                        style={styles.searchResultItem}
+                        onPress={() => handleSelectPlace(r)}
+                      >
+                        <Text style={styles.searchResultName}>{name}</Text>
+                        <Text style={styles.searchResultAddr} numberOfLines={1}>{addr}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               )}
             </View>
-            {showSearchResults && searchResults.length > 0 && (
-              <View style={styles.searchResultsBox}>
-                {searchResults.map((r, i) => {
-                  const parts = r.display_name.split(",");
-                  const name = parts[0].trim();
-                  const addr = parts.slice(1, 3).join(",").trim();
-                  return (
-                    <TouchableOpacity
-                      key={i}
-                      style={styles.searchResultItem}
-                      onPress={() => handleSelectPlace(r)}
-                    >
-                      <Text style={styles.searchResultName}>{name}</Text>
-                      <Text style={styles.searchResultAddr} numberOfLines={1}>{addr}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
+            {/* 편의시설 필터 버튼 */}
+            <TouchableOpacity
+              style={styles.poiFilterBtn}
+              onPress={() => setShowPoiFilter(!showPoiFilter)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.poiFilterBtnText}>&#9881;</Text>
+            </TouchableOpacity>
           </View>
+
+          {/* 편의시설 필터 드롭다운 */}
+          {showPoiFilter && (
+            <View style={styles.poiFilterDropdown}>
+              <Text style={styles.poiFilterTitle}>편의시설 필터</Text>
+              {[
+                { cat: "cafe", emoji: "\u2615", label: "카페" },
+                { cat: "toilet", emoji: "\uD83D\uDEBD", label: "화장실" },
+                { cat: "convenience", emoji: "\uD83C\uDFEB", label: "편의점" },
+                { cat: "bench", emoji: "\uD83E\uDE91", label: "벤치" },
+                { cat: "drinking_water", emoji: "\uD83D\uDCA7", label: "음수대" },
+                { cat: "parking", emoji: "\uD83C\uDD7F\uFE0F", label: "주차장" },
+                { cat: "restaurant", emoji: "\uD83C\uDF74", label: "음식점" },
+                { cat: "pharmacy", emoji: "\u2695\uFE0F", label: "약국" },
+              ].map((item) => (
+                <TouchableOpacity
+                  key={item.cat}
+                  style={styles.poiFilterRow}
+                  onPress={() => {
+                    // TODO: iframe postMessage로 토글
+                  }}
+                >
+                  <Text style={styles.poiFilterEmoji}>{item.emoji}</Text>
+                  <Text style={styles.poiFilterLabel}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           {/* 지도 풀스크린 */}
           <MapViewComponent location={location} weather={weather} />
@@ -658,12 +697,18 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   // 검색바
-  searchBarContainer: {
+  searchRow: {
     position: "absolute",
     top: 100,
     left: 16,
-    right: 110,
+    right: 16,
     zIndex: 11,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  searchBarContainer: {
+    flex: 1,
   },
   searchBarInner: {
     flexDirection: "row",
@@ -723,6 +768,60 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  // 편의시설 필터
+  poiFilterBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  poiFilterBtnText: {
+    fontSize: 18,
+  },
+  poiFilterDropdown: {
+    position: "absolute",
+    top: 148,
+    right: 16,
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    zIndex: 12,
+    minWidth: 140,
+  },
+  poiFilterTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.text,
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  poiFilterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    gap: 8,
+  },
+  poiFilterEmoji: {
+    fontSize: 16,
+  },
+  poiFilterLabel: {
+    fontSize: 13,
+    color: colors.text,
   },
   // 카메라 FAB
   cameraFab: {
