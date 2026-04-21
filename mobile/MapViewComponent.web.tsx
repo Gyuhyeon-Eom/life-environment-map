@@ -162,16 +162,25 @@ export default function MapViewComponent({ location, weather }: Props) {
 
     // 검색은 React Native 쪽에서 처리 (location prop 변경으로 지도 재렌더)
 
-    // 내 위치 마커 (펄스 효과)
-    var pulseIcon = L.divIcon({
+    // 내 위치 마커 (배낭곰돌이 캐릭터)
+    var bearIcon = L.divIcon({
       className: '',
-      html: '<div class="pulse-ring"></div><div class="my-location-marker"></div>',
-      iconSize: [16, 16],
-      iconAnchor: [8, 8]
+      html: '<div class="pulse-ring"></div>'
+        + '<div style="'
+        + 'width:40px;height:40px;border-radius:50%;'
+        + 'background:white;border:3px solid #2D6A4F;'
+        + 'box-shadow:0 2px 8px rgba(0,0,0,0.25);'
+        + 'display:flex;align-items:center;justify-content:center;'
+        + 'overflow:hidden;position:relative;z-index:2;'
+        + '">'
+        + '<img src="assets/mascot.jpg" style="width:34px;height:34px;border-radius:50%;object-fit:cover;" />'
+        + '</div>',
+      iconSize: [40, 40],
+      iconAnchor: [20, 20]
     });
 
-    L.marker([lat, lng], { icon: pulseIcon }).addTo(map)
-      .bindPopup('<b>현재 위치</b>', { offset: [0, -8] });
+    L.marker([lat, lng], { icon: bearIcon }).addTo(map)
+      .bindPopup('<b>나의 위치</b><br><span style="font-size:11px;color:#8E8E8E;">배낭곰돌이가 산책 중!</span>', { offset: [0, -20] });
 
     // 날씨 오버레이
     ${weather ? `

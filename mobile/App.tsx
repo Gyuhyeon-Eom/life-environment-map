@@ -19,6 +19,7 @@ import TrailList from "./TrailList";
 import TrailDetail from "./TrailDetail";
 import BloomList from "./BloomList";
 import WalkScoreCard from "./WalkScoreCard";
+import StepTracker from "./StepTracker";
 import { colors, radius } from "./theme";
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -355,6 +356,9 @@ export default function App() {
 
           {/* 지도 풀스크린 */}
           <MapViewComponent location={location} weather={weather} />
+
+          {/* 걸음수 + 코인 HUD */}
+          <StepTracker />
 
           {/* 드래그 바텀시트 */}
           <Animated.View
