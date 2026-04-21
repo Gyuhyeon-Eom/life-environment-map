@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 100,
     left: 16,
-    right: 16,
+    right: 80,
     zIndex: 11,
   },
   searchBarInner: {
