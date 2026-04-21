@@ -826,11 +826,11 @@ const styles = StyleSheet.create({
   // 카메라 FAB
   cameraFab: {
     position: "absolute",
-    bottom: 90,
+    bottom: 240,
     left: 16,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.white,
     justifyContent: "center",
     alignItems: "center",
