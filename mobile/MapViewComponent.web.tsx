@@ -228,6 +228,7 @@ export default function MapViewComponent({ location, weather }: Props) {
       options: { position: 'topleft' },
       onAdd: function() {
         var container = L.DomUtil.create('div', 'search-control');
+        container.style.marginTop = '70px';
         container.innerHTML = '<input type="text" id="map-search" placeholder="장소 검색 (예: 한강, 여의도, 북촌)" autocomplete="off" />'
           + '<span class="search-icon">&#128269;</span>'
           + '<div class="search-results" id="search-results"></div>';
