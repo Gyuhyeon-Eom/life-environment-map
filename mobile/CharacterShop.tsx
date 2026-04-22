@@ -232,66 +232,68 @@ export default function CharacterShop({ onBack }: Props) {
       {/* 아이템 그리드 */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.itemGrid}
+        contentContainerStyle={styles.itemScrollContent}
       >
-        {(activeTab === "shop"
-          ? getItemsBySlot(selectedSlot)
-          : getItemsBySlot(selectedSlot).filter((i) => owned.includes(i.id))
-        ).map((item) => {
-          const isOwned = owned.includes(item.id);
-          const isEquipped = equipped[item.slot] === item.id;
+        <View style={styles.itemGrid}>
+          {(activeTab === "shop"
+            ? getItemsBySlot(selectedSlot)
+            : getItemsBySlot(selectedSlot).filter((i) => owned.includes(i.id))
+          ).map((item) => {
+            const isOwned = owned.includes(item.id);
+            const isEquipped = equipped[item.slot] === item.id;
 
-          return (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.itemCard,
-                isEquipped && styles.itemCardEquipped,
-              ]}
-              onPress={() => handleBuy(item)}
-              activeOpacity={0.75}
-            >
-              {/* 이모지 아이콘 */}
-              <View
+            return (
+              <TouchableOpacity
+                key={item.id}
                 style={[
-                  styles.itemEmojiWrap,
-                  isEquipped && styles.itemEmojiWrapEquipped,
+                  styles.itemCard,
+                  isEquipped && styles.itemCardEquipped,
                 ]}
+                onPress={() => handleBuy(item)}
+                activeOpacity={0.75}
               >
-                <Text style={styles.itemEmoji}>{item.emoji}</Text>
-              </View>
+                {/* 이모지 아이콘 */}
+                <View
+                  style={[
+                    styles.itemEmojiWrap,
+                    isEquipped && styles.itemEmojiWrapEquipped,
+                  ]}
+                >
+                  <Text style={styles.itemEmoji}>{item.emoji}</Text>
+                </View>
 
-              {/* 정보 */}
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemDesc} numberOfLines={1}>
-                {item.description}
-              </Text>
+                {/* 정보 */}
+                <Text style={styles.itemName}>{item.name}</Text>
+                <Text style={styles.itemDesc} numberOfLines={1}>
+                  {item.description}
+                </Text>
 
-              {/* 가격/상태 */}
-              {isEquipped ? (
-                <View style={styles.equippedBadge}>
-                  <Text style={styles.equippedBadgeText}>착용 중</Text>
-                </View>
-              ) : isOwned ? (
-                <View style={styles.ownedBadge}>
-                  <Text style={styles.ownedBadgeText}>보유 중</Text>
-                </View>
-              ) : (
-                <View style={styles.priceBadge}>
-                  <Text style={styles.priceIcon}>&#11044;</Text>
-                  <Text
-                    style={[
-                      styles.priceText,
-                      coins < item.price && styles.priceTextDisabled,
-                    ]}
-                  >
-                    {item.price}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
+                {/* 가격/상태 */}
+                {isEquipped ? (
+                  <View style={styles.equippedBadge}>
+                    <Text style={styles.equippedBadgeText}>착용 중</Text>
+                  </View>
+                ) : isOwned ? (
+                  <View style={styles.ownedBadge}>
+                    <Text style={styles.ownedBadgeText}>보유 중</Text>
+                  </View>
+                ) : (
+                  <View style={styles.priceBadge}>
+                    <Text style={styles.priceIcon}>&#11044;</Text>
+                    <Text
+                      style={[
+                        styles.priceText,
+                        coins < item.price && styles.priceTextDisabled,
+                      ]}
+                    >
+                      {item.price}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
         {activeTab === "closet" &&
           getItemsBySlot(selectedSlot).filter((i) => owned.includes(i.id))
@@ -483,17 +485,21 @@ const styles = StyleSheet.create({
   slotChipTextActive: {
     color: colors.white,
   },
+  // 아이템 스크롤 컨테이너
+  itemScrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 30,
+  },
   // 아이템 그리드
   itemGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    paddingHorizontal: 16,
-    paddingTop: 4,
-    paddingBottom: 30,
-    gap: 8,
+    justifyContent: "space-between",
   },
   itemCard: {
     width: CARD_SIZE,
+    marginBottom: 8,
     backgroundColor: colors.white,
     borderRadius: radius.md,
     padding: 12,
