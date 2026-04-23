@@ -1,5 +1,5 @@
 import { View, StyleSheet, Dimensions } from "react-native";
-import { useRef } from "react";
+import { useRef, forwardRef, useImperativeHandle } from "react";
 
 type Props = {
   location: { latitude: number; longitude: number };
@@ -8,8 +8,18 @@ type Props = {
 
 const API_BASE = "http://127.0.0.1:9090";
 
-export default function MapViewComponent({ location, weather }: Props) {
+const MapViewComponent = forwardRef(function MapViewComponent({ location, weather }: Props, ref) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // 부모에서 iframe contentWindow에 접근할 수 있도록 노출
+  useImperativeHandle(ref, () => ({
+    get contentWindow() {
+      return iframeRef.current?.contentWindow;
+    },
+    postMessage(data: any, origin: string) {
+      iframeRef.current?.contentWindow?.postMessage(data, origin);
+    },
+  }));
 
   const mapHtml = `
 <!DOCTYPE html>
@@ -451,7 +461,9 @@ export default function MapViewComponent({ location, weather }: Props) {
       />
     </View>
   );
-}
+});
+
+export default MapViewComponent;
 
 const styles = StyleSheet.create({
   container: {

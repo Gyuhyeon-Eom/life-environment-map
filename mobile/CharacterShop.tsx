@@ -11,6 +11,8 @@ import {
   Image,
   Alert,
   Dimensions,
+  Platform,
+  useWindowDimensions,
 } from "react-native";
 import { colors, radius } from "./theme";
 import {
@@ -25,7 +27,8 @@ import {
 } from "./stores/coinStore";
 import { SHOP_ITEMS, ShopItem, SLOT_LABELS } from "./stores/shopData";
 
-const { width } = Dimensions.get("window");
+// 모바일 시뮬레이션 최대 폭 (웹에서 모바일처럼 보이도록)
+const MAX_MOBILE_WIDTH = 430;
 
 type Props = {
   onBack: () => void;
@@ -34,6 +37,8 @@ type Props = {
 type TabType = "shop" | "closet";
 
 export default function CharacterShop({ onBack }: Props) {
+  const { width: windowWidth } = useWindowDimensions();
+  const width = Platform.OS === "web" ? Math.min(windowWidth, MAX_MOBILE_WIDTH) : windowWidth;
   const [coins, setCoins] = useState(0);
   const [equipped, setEquipped] = useState<EquippedItems>({});
   const [owned, setOwned] = useState<string[]>([]);
@@ -239,6 +244,7 @@ export default function CharacterShop({ onBack }: Props) {
             ? getItemsBySlot(selectedSlot)
             : getItemsBySlot(selectedSlot).filter((i) => owned.includes(i.id))
           ).map((item) => {
+            const CARD_SIZE = (width - 48 - 16) / 3;
             const isOwned = owned.includes(item.id);
             const isEquipped = equipped[item.slot] === item.id;
 
@@ -247,6 +253,7 @@ export default function CharacterShop({ onBack }: Props) {
                 key={item.id}
                 style={[
                   styles.itemCard,
+                  { width: CARD_SIZE },
                   isEquipped && styles.itemCardEquipped,
                 ]}
                 onPress={() => handleBuy(item)}
@@ -311,8 +318,6 @@ export default function CharacterShop({ onBack }: Props) {
     </View>
   );
 }
-
-const CARD_SIZE = (width - 48 - 16) / 3;
 
 const styles = StyleSheet.create({
   container: {
@@ -498,7 +503,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   itemCard: {
-    width: CARD_SIZE,
     marginBottom: 8,
     backgroundColor: colors.white,
     borderRadius: radius.md,

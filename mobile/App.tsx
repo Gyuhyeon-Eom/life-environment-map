@@ -111,6 +111,11 @@ export default function App() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showPoiFilter, setShowPoiFilter] = useState(false);
+  const [poiVisible, setPoiVisible] = useState<Record<string, boolean>>({
+    cafe: true, toilet: true, convenience: true, bench: true,
+    drinking_water: true, parking: true, restaurant: true, pharmacy: true,
+  });
+  const mapIframeRef = useRef<any>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -213,6 +218,24 @@ export default function App() {
       },
     })
   ).current;
+
+  const togglePoi = (category: string) => {
+    setPoiVisible((prev) => {
+      const next = { ...prev, [category]: !prev[category] };
+      // iframe에 메시지 전송
+      if (mapIframeRef.current) {
+        try {
+          const iframe = mapIframeRef.current;
+          const contentWindow = iframe.contentWindow || iframe;
+          contentWindow.postMessage(
+            JSON.stringify({ type: "togglePoi", category }),
+            "*"
+          );
+        } catch (e) {}
+      }
+      return next;
+    });
+  };
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
@@ -386,20 +409,27 @@ export default function App() {
               ].map((item) => (
                 <TouchableOpacity
                   key={item.cat}
-                  style={styles.poiFilterRow}
-                  onPress={() => {
-                    // TODO: iframe postMessage로 토글
-                  }}
+                  style={[
+                    styles.poiFilterRow,
+                    !poiVisible[item.cat] && styles.poiFilterRowOff,
+                  ]}
+                  onPress={() => togglePoi(item.cat)}
                 >
-                  <Text style={styles.poiFilterEmoji}>{item.emoji}</Text>
-                  <Text style={styles.poiFilterLabel}>{item.label}</Text>
+                  <Text style={[
+                    styles.poiFilterEmoji,
+                    !poiVisible[item.cat] && { opacity: 0.3 },
+                  ]}>{item.emoji}</Text>
+                  <Text style={[
+                    styles.poiFilterLabel,
+                    !poiVisible[item.cat] && { color: colors.textLight, textDecorationLine: "line-through" },
+                  ]}>{item.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           )}
 
           {/* 지도 풀스크린 */}
-          <MapViewComponent location={location} weather={weather} />
+          <MapViewComponent location={location} weather={weather} ref={mapIframeRef} />
 
 
 
@@ -815,6 +845,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 6,
     gap: 8,
+  },
+  poiFilterRowOff: {
+    opacity: 0.6,
   },
   poiFilterEmoji: {
     fontSize: 16,
