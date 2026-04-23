@@ -12,6 +12,7 @@ from ..collectors.trail_collector import (
 )
 from ..collectors.osm_trail_collector import get_osm_trails
 from ..collectors.poi_collector import get_nearby_pois, POI_CATEGORIES
+from ..collectors.trail_classifier import classify_trails_batch, TRAIL_MOODS
 from ..collectors.weather_collector import get_current_weather, latlon_to_grid
 from ..collectors.air_quality_collector import get_realtime_air_quality
 
@@ -64,18 +65,77 @@ async def nearby_paths(
     lat: float = Query(..., description="위도"),
     lng: float = Query(..., description="경도"),
     radius: int = Query(3000, description="검색 반경 (m), 최대 5000"),
+    mood: Optional[str] = Query(None, description="산책 유형 필터 (healing,date,family,workout,pet,night)"),
 ):
-    """OSM 기반 주변 산책로/보행로 geometry 조회"""
+    """OSM 기반 주변 산책로/보행로 geometry 조회 (유형 분류 포함)"""
     radius = min(radius, 5000)
     result = await get_osm_trails(lat, lng, radius)
     if not result:
-        return {"status": "ok", "data": [], "count": 0}
+        return {"status": "ok", "data": [], "count": 0, "moods": TRAIL_MOODS}
+
+    trails = result["trails"]
+
+    # POI 데이터로 분류 정확도 향상 (선택적)
+    poi_result = await get_nearby_pois(lat, lng, min(radius, 1500))
+    poi_map = _build_poi_map(trails, poi_result) if poi_result else None
+
+    # 분류 적용
+    trails = classify_trails_batch(trails, poi_map)
+
+    # mood 필터
+    if mood and mood in TRAIL_MOODS:
+        trails = [t for t in trails if mood in t.get("moods", [])]
 
     return {
         "status": "ok",
-        "data": result["trails"],
-        "count": result["count"],
+        "data": trails,
+        "count": len(trails),
+        "moods": TRAIL_MOODS,
     }
+
+
+@router.get("/moods")
+async def list_moods():
+    """산책 유형 목록"""
+    return {"status": "ok", "data": TRAIL_MOODS}
+
+
+def _build_poi_map(
+    trails: list, poi_result: dict
+) -> dict:
+    """각 산책로 중심점 기준 반경 300m 내 POI 카운트 매핑"""
+    import math
+
+    pois = poi_result.get("pois", [])
+    if not pois:
+        return {}
+
+    poi_map = {}
+
+    for trail in trails:
+        geom = trail.get("geometry", [])
+        if not geom:
+            continue
+
+        # 산책로 중심점
+        mid = geom[len(geom) // 2]
+        clat, clng = mid[0], mid[1]
+
+        counts: dict = {}
+        for poi in pois:
+            plat, plng = poi.get("lat", 0), poi.get("lng", 0)
+            # 간이 거리 (약 300m 이내)
+            dlat = (plat - clat) * 111000
+            dlng = (plng - clng) * 111000 * math.cos(math.radians(clat))
+            dist = math.sqrt(dlat**2 + dlng**2)
+            if dist <= 300:
+                cat = poi.get("category", "")
+                counts[cat] = counts.get(cat, 0) + 1
+
+        if counts:
+            poi_map[trail.get("id", "")] = counts
+
+    return poi_map
 
 
 @router.get("/nearby-pois")
