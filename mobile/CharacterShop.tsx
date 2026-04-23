@@ -208,6 +208,7 @@ export default function CharacterShop({ onBack }: Props) {
       </View>
 
       {/* 슬롯 필터 */}
+      <View style={styles.slotFilterWrap}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -233,6 +234,7 @@ export default function CharacterShop({ onBack }: Props) {
           </TouchableOpacity>
         ))}
       </ScrollView>
+      </View>
 
       {/* 아이템 그리드 */}
       <ScrollView
@@ -465,10 +467,14 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   // 슬롯 필터
+  slotFilterWrap: {
+    height: 50,
+  },
   slotFilter: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 8,
+    alignItems: "center",
   },
   slotChip: {
     paddingHorizontal: 16,
