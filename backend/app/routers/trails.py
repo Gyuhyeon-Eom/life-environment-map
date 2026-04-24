@@ -13,6 +13,7 @@ from ..collectors.trail_collector import (
 from ..collectors.osm_trail_collector import get_osm_trails
 from ..collectors.poi_collector import get_nearby_pois, POI_CATEGORIES
 from ..collectors.trail_classifier import classify_trails_batch, TRAIL_MOODS
+from ..collectors.llm_classifier import classify_trails_batch_llm, get_cache_stats
 from ..collectors.weather_collector import get_current_weather, latlon_to_grid
 from ..collectors.air_quality_collector import get_realtime_air_quality
 
@@ -66,6 +67,7 @@ async def nearby_paths(
     lng: float = Query(..., description="경도"),
     radius: int = Query(3000, description="검색 반경 (m), 최대 5000"),
     mood: Optional[str] = Query(None, description="산책 유형 필터 (healing,date,family,workout,pet,night)"),
+    classifier: str = Query("llm", description="분류기 선택 (llm 또는 rule)"),
 ):
     """OSM 기반 주변 산책로/보행로 geometry 조회 (유형 분류 포함)"""
     radius = min(radius, 5000)
@@ -79,8 +81,17 @@ async def nearby_paths(
     poi_result = await get_nearby_pois(lat, lng, min(radius, 1500))
     poi_map = _build_poi_map(trails, poi_result) if poi_result else None
 
-    # 분류 적용
-    trails = classify_trails_batch(trails, poi_map)
+    # 분류 적용 (LLM 또는 rule-based)
+    if classifier == "llm":
+        try:
+            trails = await classify_trails_batch_llm(trails, poi_map)
+        except Exception as e:
+            # LLM 실패 시 rule-based fallback
+            import logging
+            logging.getLogger(__name__).warning(f"LLM 분류 실패, rule-based fallback: {e}")
+            trails = classify_trails_batch(trails, poi_map)
+    else:
+        trails = classify_trails_batch(trails, poi_map)
 
     # mood 필터
     if mood and mood in TRAIL_MOODS:
@@ -91,6 +102,7 @@ async def nearby_paths(
         "data": trails,
         "count": len(trails),
         "moods": TRAIL_MOODS,
+        "classifier": classifier,
     }
 
 
@@ -98,6 +110,12 @@ async def nearby_paths(
 async def list_moods():
     """산책 유형 목록"""
     return {"status": "ok", "data": TRAIL_MOODS}
+
+
+@router.get("/classifier/stats")
+async def classifier_stats():
+    """LLM 분류 캐시 상태"""
+    return {"status": "ok", "data": get_cache_stats()}
 
 
 def _build_poi_map(
