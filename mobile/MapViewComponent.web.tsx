@@ -258,11 +258,17 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
       night:    { emoji: '\\uD83C\\uDF19', label: '야경' },
     };
 
-    // 전역 산책로 데이터 저장 (필터링용)
+    // 전역 산책로 데이터 저장 (카드 리스트에서 사용)
     var allTrailData = [];
+    // 선택된 산책로의 레이어 (하이라이트용)
+    var selectedTrailLayer = L.layerGroup().addTo(map);
+    // 마커 전용 레이어
+    var markerGroup = L.layerGroup().addTo(map);
 
     function loadTrails(tlat, tlng) {
       trailGroup.clearLayers();
+      markerGroup.clearLayers();
+      selectedTrailLayer.clearLayers();
       allTrailData = [];
 
     var url = '${API_BASE}/api/v1/trails/nearby-paths?lat=' + tlat + '&lng=' + tlng + '&radius=3000';
@@ -272,16 +278,19 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
       .then(function(data) {
         if (!data.data || data.data.length === 0) return;
         allTrailData = data.data;
-        renderTrails(allTrailData);
+        renderMarkers(allTrailData);
         console.log('Trails loaded:', data.count);
+        // RN에 산책로 데이터 전달
+        window.parent.postMessage(JSON.stringify({ type: 'trailsLoaded', trails: allTrailData }), '*');
       })
       .catch(function(e) {
         console.log('Trail fetch error:', e);
       });
     }
 
-    function renderTrails(trails) {
-      trailGroup.clearLayers();
+    // 각 산책로 출발점에 원형 마커만 표시 (Polyline은 그리지 않음)
+    function renderMarkers(trails) {
+      markerGroup.clearLayers();
 
       trails.forEach(function(trail) {
         if (!trail.geometry || trail.geometry.length < 2) return;
@@ -293,96 +302,75 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
         if (activeMoodFilter && moods.indexOf(activeMoodFilter) === -1) return;
 
         var style = moodStyles[primaryMood] || fallbackStyle;
+        var startPoint = trail.geometry[0];
 
-        // 글로우 효과 (아래 레이어)
-        var glow = L.polyline(trail.geometry, {
-          color: style.glow,
-          weight: style.weight + 6,
-          opacity: 0.4,
-          lineCap: 'round',
-          lineJoin: 'round',
-          interactive: false,
-        }).addTo(trailGroup);
+        // 작은 원형 마커
+        var marker = L.circleMarker(startPoint, {
+          radius: 7,
+          fillColor: style.color,
+          fillOpacity: 0.85,
+          color: '#FFFFFF',
+          weight: 2.5,
+          opacity: 1,
+        }).addTo(markerGroup);
 
-        // 메인 라인
-        var line = L.polyline(trail.geometry, {
-          color: style.color,
-          weight: style.weight,
-          opacity: style.opacity,
-          dashArray: style.dashArray,
-          lineCap: 'round',
-          lineJoin: 'round',
-        }).addTo(trailGroup);
-
-        // 팝업
+        // 팝업 (간단)
         var catLabel = { hiking: '등산로', footway: '산책로', pedestrian: '보행자거리', path: '오솔길' };
         var trailName = trail.name || (catLabel[trail.category] || '산책로') + ' ' + (trail.id ? trail.id.toString().slice(-4) : '');
         var lengthStr = trail.length_m ? (trail.length_m >= 1000 ? (trail.length_m / 1000).toFixed(1) + 'km' : trail.length_m + 'm') : '';
-
-        // mood 태그 HTML
-        var moodTagsHtml = '';
-        moods.forEach(function(m) {
-          var meta = moodMeta[m];
-          var mStyle = moodStyles[m] || fallbackStyle;
-          if (meta) {
-            moodTagsHtml += '<span style="display:inline-block;background:' + mStyle.color + '15;color:' + mStyle.color + ';font-size:10px;font-weight:600;padding:2px 6px;border-radius:8px;margin-right:3px;">'
-              + meta.emoji + ' ' + meta.label + '</span>';
-          }
-        });
-
-        // 시드 기반 더미 평점
-        var seed = trailName + (trail.category || '');
-        var hash = 0;
-        for (var ci = 0; ci < seed.length; ci++) {
-          hash = ((hash << 5) - hash) + seed.charCodeAt(ci);
-          hash |= 0;
-        }
-        var rating = 3.0 + (Math.abs(hash) % 21) / 10.0;
-        rating = Math.min(rating, 5.0);
-        var reviews = 3 + (Math.abs(hash) % 120);
-
-        var fullStars = Math.floor(rating);
-        var halfStar = (rating - fullStars) >= 0.5;
-        var starsHtml = '';
-        for (var si = 0; si < 5; si++) {
-          if (si < fullStars) starsHtml += '<span class="tp-star">&#9733;</span>';
-          else if (si === fullStars && halfStar) starsHtml += '<span class="tp-star">&#9733;</span>';
-          else starsHtml += '<span class="tp-star-empty">&#9733;</span>';
-        }
-
-        var comments = [
-          '경치가 좋고 걷기 편해요', '조용해서 산책하기 딱이에요',
-          '그늘이 많아 여름에도 좋아요', '오르막이 좀 있지만 뷰가 최고',
-          '아이들과 함께 걷기 좋아요', '단풍철에 정말 예뻐요',
-          '야간 조명이 있어서 밤산책 가능', '주말에 사람이 좀 많아요',
-          '벤치가 군데군데 있어서 쉬기 좋아요', '자전거 주의! 가끔 빠르게 지나가요',
-        ];
-        var comment = comments[Math.abs(hash) % comments.length];
-        var commenter = ['산책러', '동네주민', '걷기좋아', '주말탐험', '힐링중', '자연인'][Math.abs(hash >> 4) % 6];
-
         var popup = '<div class="trail-popup">'
           + '<div class="tp-name">' + trailName + '</div>'
-          + '<div style="margin:4px 0 6px;">' + moodTagsHtml + '</div>'
-          + (lengthStr ? '<div class="tp-cat">' + (catLabel[trail.category] || '산책로') + ' · ' + lengthStr + '</div>' : '<div class="tp-cat">' + (catLabel[trail.category] || '산책로') + '</div>')
-          + '<div class="tp-stars">' + starsHtml + '<span class="tp-score">' + rating.toFixed(1) + '</span></div>'
-          + '<div class="tp-reviews">리뷰 ' + reviews + '개</div>'
-          + '<div class="tp-comment"><span class="tp-commenter">' + commenter + '</span> "' + comment + '"</div>'
-          + (trail.surface ? '<div class="tp-surface">노면: ' + trail.surface + '</div>' : '')
+          + '<div class="tp-cat">' + (catLabel[trail.category] || '산책로') + (lengthStr ? ' · ' + lengthStr : '') + '</div>'
           + '</div>';
-        line.bindPopup(popup, { maxWidth: 240, closeButton: false });
+        marker.bindPopup(popup, { maxWidth: 180, closeButton: false });
 
-        // 호버 효과
-        line.on('mouseover', function(e) {
-          e.target.setStyle({ weight: style.weight + 3, opacity: 1 });
-          glow.setStyle({ weight: style.weight + 10, opacity: 0.6 });
-        });
-        line.on('mouseout', function(e) {
-          e.target.setStyle({ weight: style.weight, opacity: style.opacity });
-          glow.setStyle({ weight: style.weight + 6, opacity: 0.4 });
-        });
+        // 호버 시 살짝 키우기
+        marker.on('mouseover', function() { marker.setRadius(10); });
+        marker.on('mouseout', function() { marker.setRadius(7); });
       });
     }
-    // 초기 로드
+
+    // 특정 산책로 하나만 Polyline으로 하이라이트
+    function highlightTrail(trailId) {
+      selectedTrailLayer.clearLayers();
+
+      var trail = null;
+      for (var i = 0; i < allTrailData.length; i++) {
+        if (String(allTrailData[i].id) === String(trailId)) {
+          trail = allTrailData[i];
+          break;
+        }
+      }
+      if (!trail || !trail.geometry || trail.geometry.length < 2) return;
+
+      var primaryMood = trail.primary_mood || 'healing';
+      var style = moodStyles[primaryMood] || fallbackStyle;
+
+      // 글로우 효과
+      L.polyline(trail.geometry, {
+        color: style.glow,
+        weight: style.weight + 8,
+        opacity: 0.5,
+        lineCap: 'round',
+        lineJoin: 'round',
+        interactive: false,
+      }).addTo(selectedTrailLayer);
+
+      // 메인 라인 (weight + 2로 더 두껍게)
+      var line = L.polyline(trail.geometry, {
+        color: style.color,
+        weight: style.weight + 2,
+        opacity: 0.9,
+        dashArray: style.dashArray,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(selectedTrailLayer);
+
+      // 지도 fitBounds
+      map.fitBounds(line.getBounds(), { padding: [40, 40], maxZoom: 16 });
+    }
+
+    // 초기 로드 (마커만)
     loadTrails(lat, lng);
 
     // === 편의시설(SOC) 마커 ===
@@ -467,7 +455,7 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
         allBtn.onclick = function() {
           activeMoodFilter = null;
           updateMoodChips();
-          renderTrails(allTrailData);
+          renderMarkers(allTrailData);
         };
         container.appendChild(allBtn);
 
@@ -488,7 +476,7 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
               activeMoodFilter = m;
             }
             updateMoodChips();
-            renderTrails(allTrailData);
+            renderMarkers(allTrailData);
           };
           container.appendChild(btn);
         });
@@ -534,7 +522,7 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
     var poiVisible = {};
     Object.keys(poiIcons).forEach(function(cat) { poiVisible[cat] = true; });
 
-    // RN에서 메시지 받아서 POI 토글 / mood 필터
+    // RN에서 메시지 받아서 POI 토글 / mood 필터 / 산책로 선택
     window.addEventListener('message', function(e) {
       try {
         var msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
@@ -549,7 +537,19 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
         if (msg.type === 'filterMood') {
           activeMoodFilter = msg.mood || null;
           updateMoodChips();
-          renderTrails(allTrailData);
+          renderMarkers(allTrailData);
+        }
+        // 산책로 선택 → 해당 산책로만 Polyline 하이라이트
+        if (msg.type === 'selectTrail') {
+          highlightTrail(msg.trailId);
+        }
+        // 하이라이트 제거
+        if (msg.type === 'clearTrail') {
+          selectedTrailLayer.clearLayers();
+        }
+        // 산책로 데이터 요청 → 부모에게 응답
+        if (msg.type === 'getTrails') {
+          window.parent.postMessage(JSON.stringify({ type: 'trailsLoaded', trails: allTrailData }), '*');
         }
       } catch(ex) {}
     });

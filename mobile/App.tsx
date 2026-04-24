@@ -50,44 +50,29 @@ type WeatherData = {
 
 const API_BASE = "http://127.0.0.1:9090";
 
-const COMMUNITY_POSTS = [
-  {
-    id: "1",
-    user: "산책러",
-    image: "https://picsum.photos/seed/walk1/400/400",
-    location: "북한산 둘레길",
-    lat: 37.658,
-    lng: 126.987,
-    tags: ["둘레길", "산책"],
-    likes: 24,
-    timeAgo: "2시간 전",
-    airQuality: "좋음",
-  },
-  {
-    id: "2",
-    user: "꽃구경",
-    image: "https://picsum.photos/seed/flower2/400/400",
-    location: "여의도 윤중로",
-    lat: 37.528,
-    lng: 126.932,
-    tags: ["벚꽃", "봄"],
-    likes: 58,
-    timeAgo: "5시간 전",
-    airQuality: "보통",
-  },
-  {
-    id: "3",
-    user: "등산왕",
-    image: "https://picsum.photos/seed/mt3/400/400",
-    location: "관악산",
-    lat: 37.443,
-    lng: 126.964,
-    tags: ["등산", "주말"],
-    likes: 15,
-    timeAgo: "어제",
-    airQuality: "좋음",
-  },
-];
+// Mood 컬러 맵
+const MOOD_COLORS: Record<string, string> = {
+  healing: '#6BAB90',
+  date: '#F4A4B8',
+  family: '#E8B888',
+  workout: '#E8A889',
+  pet: '#B8A0E0',
+  night: '#7BB8D9',
+};
+const MOOD_LABELS: Record<string, string> = {
+  healing: '힐링',
+  date: '데이트',
+  family: '가족',
+  workout: '운동',
+  pet: '반려동물',
+  night: '야경',
+};
+const CATEGORY_LABELS: Record<string, string> = {
+  hiking: '등산로',
+  footway: '산책로',
+  pedestrian: '보행자거리',
+  path: '오솔길',
+};
 
 const getAirColor = (grade: string) => {
   switch (grade) {
@@ -115,6 +100,8 @@ export default function App() {
     cafe: true, toilet: true, convenience: true, bench: true,
     drinking_water: true, parking: true, restaurant: true, pharmacy: true,
   });
+  const [nearbyTrails, setNearbyTrails] = useState<any[]>([]);
+  const [selectedNearbyTrail, setSelectedNearbyTrail] = useState<string | null>(null);
   const mapIframeRef = useRef<any>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -170,6 +157,69 @@ export default function App() {
       } catch (e) {}
     })();
   }, [location]);
+
+  // iframe에서 trailsLoaded 메시지 수신
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const handleMessage = (e: MessageEvent) => {
+      try {
+        const msg = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+        if (msg.type === "trailsLoaded" && Array.isArray(msg.trails)) {
+          setNearbyTrails(msg.trails);
+        }
+      } catch (ex) {}
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  // 산책로 카드 선택 핸들러
+  const handleSelectTrailCard = (trailId: string) => {
+    const isDeselect = selectedNearbyTrail === trailId;
+    setSelectedNearbyTrail(isDeselect ? null : trailId);
+
+    if (mapIframeRef.current) {
+      try {
+        const iframe = mapIframeRef.current;
+        const contentWindow = iframe.contentWindow || iframe;
+        if (isDeselect) {
+          contentWindow.postMessage(JSON.stringify({ type: "clearTrail" }), "*");
+        } else {
+          contentWindow.postMessage(JSON.stringify({ type: "selectTrail", trailId: String(trailId) }), "*");
+          // 바텀시트 살짝 내리기 (peek 위치로)
+          const peekY = SCREEN_HEIGHT - SHEET_PEEK - TAB_BAR_HEIGHT;
+          lastSheetY.current = peekY;
+          Animated.spring(sheetY, {
+            toValue: peekY,
+            friction: 8,
+            tension: 65,
+            useNativeDriver: false,
+          }).start();
+        }
+      } catch (e) {}
+    }
+  };
+
+  // 거리 포맷 헬퍼
+  const formatLength = (m: number) => {
+    if (!m) return "";
+    return m >= 1000 ? (m / 1000).toFixed(1) + "km" : m + "m";
+  };
+
+  // 시드 기반 더미 평점 (지도와 동일 로직)
+  const getTrailRating = (trail: any) => {
+    const catLabel = CATEGORY_LABELS[trail.category] || "산책로";
+    const trailName = trail.name || catLabel + " " + (trail.id ? String(trail.id).slice(-4) : "");
+    const seed = trailName + (trail.category || "");
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+      hash |= 0;
+    }
+    const rating = Math.min(3.0 + (Math.abs(hash) % 21) / 10.0, 5.0);
+    const reviews = 3 + (Math.abs(hash) % 120);
+    return { rating, reviews };
+  };
 
   // 드래그 바텀시트
   const sheetY = useRef(new Animated.Value(SCREEN_HEIGHT - SHEET_PEEK - TAB_BAR_HEIGHT)).current;
@@ -456,46 +506,65 @@ export default function App() {
             />
 
             {/* 위로 드래그하면 보이는 영역 */}
+            {/* 주변 산책로 카드 리스트 */}
             <ScrollView
               showsVerticalScrollIndicator={false}
               style={styles.sheetScrollArea}
               nestedScrollEnabled
             >
               <View style={styles.bottomSheetHeader}>
-                <Text style={styles.bottomSheetTitle}>친구들의 산책</Text>
-                <TouchableOpacity style={styles.seeAllBtn}>
-                  <Text style={styles.seeAllText}>전체보기</Text>
-                </TouchableOpacity>
+                <Text style={styles.bottomSheetTitle}>주변 산책로</Text>
+                <View style={styles.trailCountBadge}>
+                  <Text style={styles.trailCountText}>{nearbyTrails.length}개</Text>
+                </View>
               </View>
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.cardScroll}
-              >
-                {COMMUNITY_POSTS.map((post) => (
-                  <TouchableOpacity key={post.id} style={styles.communityCard} activeOpacity={0.85}>
-                    <Image source={{ uri: post.image }} style={styles.communityCardImage} />
-                    <View style={styles.communityOverlay}>
-                      <View style={[styles.airBadge, { backgroundColor: getAirColor(post.airQuality) }]}>
-                        <Text style={styles.airBadgeText}>{post.airQuality}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.communityInfo}>
-                      <Text style={styles.communityLocation}>{post.location}</Text>
-                      <View style={styles.communityMeta}>
-                        <Text style={styles.communityUser}>{post.user}</Text>
-                        <Text style={styles.communityTime}>{post.timeAgo}</Text>
-                      </View>
-                      <View style={styles.communityTags}>
-                        {post.tags.map((tag) => (
-                          <Text key={tag} style={styles.communityTag}>#{tag}</Text>
-                        ))}
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              <View style={styles.trailCardList}>
+                {nearbyTrails.length === 0 ? (
+                  <View style={styles.trailEmptyState}>
+                    <Text style={styles.trailEmptyText}>주변 산책로를 불러오는 중...</Text>
+                  </View>
+                ) : (
+                  nearbyTrails.map((trail: any) => {
+                    const primaryMood = trail.primary_mood || "healing";
+                    const moodColor = MOOD_COLORS[primaryMood] || colors.textSecondary;
+                    const moodLabel = MOOD_LABELS[primaryMood] || primaryMood;
+                    const catLabel = CATEGORY_LABELS[trail.category] || "산책로";
+                    const trailName = trail.name || catLabel + " " + (trail.id ? String(trail.id).slice(-4) : "");
+                    const lengthStr = formatLength(trail.length_m);
+                    const { rating, reviews } = getTrailRating(trail);
+                    const isSelected = selectedNearbyTrail === String(trail.id);
+
+                    return (
+                      <TouchableOpacity
+                        key={trail.id}
+                        style={[
+                          styles.trailCard,
+                          isSelected && { borderLeftColor: moodColor, borderLeftWidth: 3 },
+                        ]}
+                        activeOpacity={0.7}
+                        onPress={() => handleSelectTrailCard(String(trail.id))}
+                      >
+                        <View style={styles.trailCardContent}>
+                          <View style={styles.trailCardTopRow}>
+                            <View style={[styles.moodDot, { backgroundColor: moodColor }]} />
+                            <Text style={styles.moodTag}>{moodLabel}</Text>
+                            <Text style={styles.trailCardName} numberOfLines={1}>{trailName}</Text>
+                          </View>
+                          <Text style={styles.trailCardMeta}>
+                            {catLabel}{lengthStr ? " \u00B7 " + lengthStr : ""}
+                          </Text>
+                          <View style={styles.trailCardRating}>
+                            <Text style={styles.trailCardStar}>{"\u2605"}</Text>
+                            <Text style={styles.trailCardScore}>{rating.toFixed(1)}</Text>
+                            <Text style={styles.trailCardReviews}>({reviews})</Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+              </View>
             </ScrollView>
           </Animated.View>
         </View>
@@ -920,81 +989,90 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.text,
   },
-  seeAllBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryBg,
-  },
-  seeAllText: {
-    fontSize: 13,
-    color: colors.primary,
-    fontWeight: "600",
-  },
-  // 커뮤니티 카드
-  cardScroll: {
+
+  // 산책로 카드 리스트
+  trailCardList: {
     paddingHorizontal: 16,
-    gap: 12,
+    gap: 10,
+    paddingBottom: 40,
   },
-  communityCard: {
-    width: width * 0.36,
-    borderRadius: radius.md,
-    overflow: "hidden",
+  trailCard: {
     backgroundColor: colors.white,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  communityCardImage: {
-    width: "100%",
-    height: width * 0.28,
-    borderTopLeftRadius: radius.md,
-    borderTopRightRadius: radius.md,
+  trailCardContent: {
+    gap: 4,
   },
-  communityOverlay: {
-    position: "absolute",
-    top: 8,
-    right: 8,
+  trailCardTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
-  airBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.full,
+  moodDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
-  airBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: colors.white,
+  moodTag: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: colors.textSecondary,
   },
-  communityInfo: {
-    padding: 12,
-  },
-  communityLocation: {
+  trailCardName: {
+    flex: 1,
     fontSize: 14,
     fontWeight: "700",
     color: colors.text,
-    marginBottom: 4,
   },
-  communityMeta: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  communityUser: {
+  trailCardMeta: {
     fontSize: 12,
     color: colors.textSecondary,
+    marginLeft: 14,
   },
-  communityTime: {
-    fontSize: 11,
-    color: colors.textLight,
-  },
-  communityTags: {
+  trailCardRating: {
     flexDirection: "row",
-    gap: 6,
+    alignItems: "center",
+    gap: 3,
+    marginLeft: 14,
+    marginTop: 2,
   },
-  communityTag: {
+  trailCardStar: {
+    fontSize: 12,
+    color: "#F4A261",
+  },
+  trailCardScore: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  trailCardReviews: {
     fontSize: 11,
+    color: colors.textSecondary,
+  },
+  trailCountBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryBg,
+  },
+  trailCountText: {
+    fontSize: 12,
+    fontWeight: "600",
     color: colors.primary,
-    fontWeight: "500",
+  },
+  trailEmptyState: {
+    paddingVertical: 30,
+    alignItems: "center",
+  },
+  trailEmptyText: {
+    fontSize: 13,
+    color: colors.textSecondary,
   },
   // 빠른 액션
   quickActions: {
