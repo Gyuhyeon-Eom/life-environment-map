@@ -440,13 +440,15 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
 
     // === Mood 필터 칩 (하단 좌측) ===
     var MoodFilter = L.Control.extend({
-      options: { position: 'bottomleft' },
+      options: { position: 'topleft' },
       onAdd: function() {
         var container = L.DomUtil.create('div');
         container.style.display = 'flex';
-        container.style.flexDirection = 'column';
+        container.style.flexDirection = 'row';
+        container.style.flexWrap = 'wrap';
         container.style.gap = '4px';
-        container.style.marginBottom = '10px';
+        container.style.marginTop = '100px';
+        container.style.maxWidth = '280px';
 
         var allBtn = document.createElement('button');
         allBtn.className = 'mood-chip mood-chip-active';
