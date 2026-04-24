@@ -327,6 +327,15 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
         // 호버 시 살짝 키우기
         marker.on('mouseover', function() { marker.setRadius(10); });
         marker.on('mouseout', function() { marker.setRadius(7); });
+
+        // 클릭 시 해당 산책로 Polyline 하이라이트
+        (function(t) {
+          marker.on('click', function() {
+            highlightTrail(t.id);
+            // RN에도 알려주기
+            window.parent.postMessage(JSON.stringify({ type: 'trailSelected', trailId: String(t.id) }), '*');
+          });
+        })(trail);
       });
     }
 
