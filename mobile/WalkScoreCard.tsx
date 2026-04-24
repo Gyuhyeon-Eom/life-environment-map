@@ -40,8 +40,8 @@ type Props = {
 };
 
 const GRADE_CONFIG: Record<string, { color: string; bg: string; icon: string }> = {
-  "최고": { color: "#2D6A4F", bg: "#D8F3DC", icon: "+++" },
-  "좋음": { color: "#4CAF50", bg: "#E8F5E9", icon: "++" },
+  "최고": { color: "#6BAB90", bg: "#EDF6F0", icon: "+++" },
+  "좋음": { color: "#7BC8A4", bg: "#EDF6F0", icon: "++" },
   "보통": { color: "#FF9800", bg: "#FFF3E0", icon: "+-" },
   "나쁨": { color: "#F44336", bg: "#FFEBEE", icon: "--" },
   "매우나쁨": { color: "#9C27B0", bg: "#F3E5F5", icon: "---" },

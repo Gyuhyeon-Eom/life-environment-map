@@ -49,13 +49,13 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
     .trail-popup .tp-name {
       font-weight: 700;
       font-size: 13px;
-      color: #262626;
+      color: #3D3D3D;
       margin-bottom: 3px;
       line-height: 1.3;
     }
     .trail-popup .tp-cat {
       font-size: 10px;
-      color: #8E8E8E;
+      color: #9E9E9E;
       margin-bottom: 5px;
     }
     .trail-popup .tp-stars {
@@ -77,7 +77,7 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
     .trail-popup .tp-score {
       font-size: 11px;
       font-weight: 700;
-      color: #2D6A4F;
+      color: #6BAB90;
       margin-left: 2px;
     }
     .trail-popup .tp-reviews {
@@ -96,7 +96,7 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
     .trail-popup .tp-commenter {
       font-weight: 600;
       font-style: normal;
-      color: #2D6A4F;
+      color: #6BAB90;
       font-size: 10px;
     }
     .trail-popup .tp-surface {
@@ -118,27 +118,27 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
     .weather-temp {
       font-size: 20px;
       font-weight: 800;
-      color: #2D6A4F;
+      color: #6BAB90;
     }
     .weather-detail {
       font-size: 11px;
-      color: #8E8E8E;
+      color: #9E9E9E;
       margin-top: 2px;
     }
     .my-location-marker {
       width: 16px;
       height: 16px;
-      background: #2D6A4F;
+      background: #6BAB90;
       border: 3px solid white;
       border-radius: 50%;
-      box-shadow: 0 0 0 4px rgba(45,106,79,0.2), 0 2px 6px rgba(0,0,0,0.3);
+      box-shadow: 0 0 0 4px rgba(107,171,144,0.2), 0 2px 6px rgba(0,0,0,0.3);
     }
     .pulse-ring {
       position: absolute;
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      background: rgba(45,106,79,0.15);
+      background: rgba(107,171,144,0.12);
       animation: pulse 2s ease-out infinite;
       margin-left: -12px;
       margin-top: -12px;
@@ -170,9 +170,9 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
       transform: scale(1.05);
     }
     .mood-chip-active {
-      background: #2D6A4F;
+      background: #6BAB90;
       color: white;
-      border-color: #2D6A4F;
+      border-color: #6BAB90;
     }
   </style>
 </head>
@@ -188,7 +188,7 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
     }).setView([lat, lng], 15);
 
     // 깔끔한 타일 (CartoDB Voyager)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
       subdomains: 'abcd'
     }).addTo(map);
@@ -200,11 +200,11 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
 
     // 내 위치 마커 (배낭곰돌이 SVG)
     var bearSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 56" width="44" height="52">'
-      + '<polygon points="20,48 28,48 24,56" fill="white" stroke="#2D6A4F" stroke-width="1.5" stroke-linejoin="round"/>'
-      + '<circle cx="24" cy="24" r="22" fill="white" stroke="#2D6A4F" stroke-width="2.5"/>'
-      + '<circle cx="10" cy="8" r="6" fill="#C4956A" stroke="#2D6A4F" stroke-width="1.5"/>'
+      + '<polygon points="20,48 28,48 24,56" fill="white" stroke="#6BAB90" stroke-width="1.5" stroke-linejoin="round"/>'
+      + '<circle cx="24" cy="24" r="22" fill="white" stroke="#6BAB90" stroke-width="2.5"/>'
+      + '<circle cx="10" cy="8" r="6" fill="#C4956A" stroke="#6BAB90" stroke-width="1.5"/>'
       + '<circle cx="10" cy="8" r="3" fill="#E8C9A0"/>'
-      + '<circle cx="38" cy="8" r="6" fill="#C4956A" stroke="#2D6A4F" stroke-width="1.5"/>'
+      + '<circle cx="38" cy="8" r="6" fill="#C4956A" stroke="#6BAB90" stroke-width="1.5"/>'
       + '<circle cx="38" cy="8" r="3" fill="#E8C9A0"/>'
       + '<circle cx="24" cy="26" r="16" fill="#D4A574"/>'
       + '<ellipse cx="24" cy="32" rx="10" ry="8" fill="#E8C9A0"/>'
@@ -214,8 +214,8 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
       + '<path d="M21,30 Q24,33 27,30" fill="none" stroke="#333" stroke-width="1.2" stroke-linecap="round"/>'
       + '<ellipse cx="14" cy="28" rx="3" ry="2" fill="#FFB5B5" opacity="0.5"/>'
       + '<ellipse cx="34" cy="28" rx="3" ry="2" fill="#FFB5B5" opacity="0.5"/>'
-      + '<path d="M16,20 L16,35" stroke="#2D6A4F" stroke-width="2" stroke-linecap="round"/>'
-      + '<path d="M32,20 L32,35" stroke="#2D6A4F" stroke-width="2" stroke-linecap="round"/>'
+      + '<path d="M16,20 L16,35" stroke="#6BAB90" stroke-width="2" stroke-linecap="round"/>'
+      + '<path d="M32,20 L32,35" stroke="#6BAB90" stroke-width="2" stroke-linecap="round"/>'
       + '</svg>';
 
     var bearIcon = L.divIcon({
@@ -227,7 +227,7 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
     });
 
     L.marker([lat, lng], { icon: bearIcon }).addTo(map)
-      .bindPopup('<b>나의 위치</b><br><span style="font-size:11px;color:#8E8E8E;">배낭곰돌이가 산책 중!</span>', { offset: [0, -52] });
+      .bindPopup('<b>나의 위치</b><br><span style="font-size:11px;color:#9E9E9E;">배낭곰돌이가 산책 중!</span>', { offset: [0, -52] });
 
     // 날씨는 앱 헤더에 표시 (지도 내 중복 제거)
 
@@ -236,12 +236,12 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
 
     // 유형(mood)별 스타일 - 백엔드 분류 결과 사용
     var moodStyles = {
-      healing:  { color: '#2D6A4F', weight: 4,   opacity: 0.8,  dashArray: null,    glow: 'rgba(45,106,79,0.3)' },
-      date:     { color: '#FF6B8A', weight: 4,   opacity: 0.8,  dashArray: null,    glow: 'rgba(255,107,138,0.3)' },
-      family:   { color: '#F4A261', weight: 4.5, opacity: 0.8,  dashArray: null,    glow: 'rgba(244,162,97,0.3)' },
-      workout:  { color: '#E76F51', weight: 3.5, opacity: 0.75, dashArray: '8 5',   glow: 'rgba(231,111,81,0.3)' },
-      pet:      { color: '#8B5CF6', weight: 4,   opacity: 0.8,  dashArray: null,    glow: 'rgba(139,92,246,0.3)' },
-      night:    { color: '#3B82F6', weight: 3.5, opacity: 0.75, dashArray: '4 8 4', glow: 'rgba(59,130,246,0.3)' },
+      healing:  { color: '#6BAB90', weight: 4,   opacity: 0.7,  dashArray: null,    glow: 'rgba(107,171,144,0.25)' },
+      date:     { color: '#F4A4B8', weight: 4,   opacity: 0.7,  dashArray: null,    glow: 'rgba(244,164,184,0.25)' },
+      family:   { color: '#E8B888', weight: 4.5, opacity: 0.7,  dashArray: null,    glow: 'rgba(232,184,136,0.25)' },
+      workout:  { color: '#E8A889', weight: 3.5, opacity: 0.65, dashArray: '8 5',   glow: 'rgba(232,168,137,0.25)' },
+      pet:      { color: '#B8A0E0', weight: 4,   opacity: 0.7,  dashArray: null,    glow: 'rgba(184,160,224,0.25)' },
+      night:    { color: '#7BB8D9', weight: 3.5, opacity: 0.65, dashArray: '4 8 4', glow: 'rgba(123,184,217,0.25)' },
     };
     var fallbackStyle = { color: '#CCC', weight: 2.5, opacity: 0.5, dashArray: '4 4', glow: 'rgba(0,0,0,0.1)' };
 
@@ -432,7 +432,7 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
             + '<div class="tp-name">' + poi.name + '</div>'
             + '<div class="tp-cat">' + poi.label + '</div>'
             + (poi.opening_hours ? '<div class="tp-surface">' + poi.opening_hours + '</div>' : '')
-            + (poi.wheelchair === 'yes' ? '<div class="tp-surface" style="color:#2D6A4F;">&#9855; 휠체어 접근 가능</div>' : '')
+            + (poi.wheelchair === 'yes' ? '<div class="tp-surface" style="color:#6BAB90;">&#9855; 휠체어 접근 가능</div>' : '')
             + '</div>';
           marker.bindPopup(popupHtml, { maxWidth: 180, closeButton: false });
 
