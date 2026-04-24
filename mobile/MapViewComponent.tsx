@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from "react-native";
 import MapView, { Marker } from "react-native-maps";
+import { softMapStyle } from "./mapStyle";
 
 type Props = {
   location: { latitude: number; longitude: number };
@@ -18,6 +19,7 @@ export default function MapViewComponent({ location, weather }: Props) {
       }}
       showsUserLocation={true}
       showsMyLocationButton={true}
+      customMapStyle={softMapStyle}
     >
       <Marker
         coordinate={location}

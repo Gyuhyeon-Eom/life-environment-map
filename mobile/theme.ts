@@ -1,32 +1,32 @@
 // 앱 전체 디자인 테마
 export const colors = {
-  // 메인 컬러
-  primary: "#2D6A4F",       // 자연 녹색 (진한)
-  primaryLight: "#95D5B2",  // 연한 녹색
-  primaryBg: "#D8F3DC",     // 배경 녹색
+  // 메인 컬러 (파스텔 자연톤)
+  primary: "#6BAB90",       // 밝은 세이지 그린
+  primaryLight: "#B8DFC9",  // 연한 민트
+  primaryBg: "#EDF6F0",     // 거의 흰 녹색
 
-  // 서브 컬러
-  cherry: "#FF6B8A",        // 벚꽃 핑크
-  cherryLight: "#FFE0E6",
-  autumn: "#E76F51",        // 단풍 오렌지
-  autumnLight: "#FFEEE8",
+  // 서브 컬러 (파스텔)
+  cherry: "#F4A4B8",        // 부드러운 핑크
+  cherryLight: "#FDF0F3",
+  autumn: "#E8A889",        // 부드러운 코랄
+  autumnLight: "#FDF3EE",
 
   // 기본
   white: "#FFFFFF",
-  bg: "#FAFAFA",            // 앱 배경
+  bg: "#F8F9F7",            // 살짝 따뜻한 회색
   card: "#FFFFFF",
-  border: "#F0F0F0",
+  border: "#EBEBEB",
 
   // 텍스트
-  text: "#262626",          // 인스타 스타일 진한 검정
-  textSecondary: "#8E8E8E",
-  textLight: "#C7C7C7",
+  text: "#3D3D3D",          // 부드러운 차콜
+  textSecondary: "#9E9E9E",
+  textLight: "#CCCCCC",
 
-  // 대기질
-  airGood: "#4CAF50",
-  airNormal: "#2196F3",
-  airBad: "#FF9800",
-  airVeryBad: "#F44336",
+  // 대기질 (파스텔)
+  airGood: "#7BC8A4",
+  airNormal: "#7BB8D9",
+  airBad: "#F0C078",
+  airVeryBad: "#E88B8B",
 };
 
 export const fonts = {
