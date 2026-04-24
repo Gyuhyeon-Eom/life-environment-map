@@ -447,7 +447,7 @@ const MapViewComponent = forwardRef(function MapViewComponent({ location, weathe
         container.style.flexDirection = 'row';
         container.style.flexWrap = 'wrap';
         container.style.gap = '4px';
-        container.style.marginTop = '120px';
+        container.style.marginTop = '155px';
         container.style.maxWidth = '280px';
 
         var allBtn = document.createElement('button');
