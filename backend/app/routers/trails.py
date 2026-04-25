@@ -67,7 +67,7 @@ async def nearby_paths(
     lng: float = Query(..., description="경도"),
     radius: int = Query(3000, description="검색 반경 (m), 최대 5000"),
     mood: Optional[str] = Query(None, description="산책 유형 필터 (healing,date,family,workout,pet,night)"),
-    classifier: str = Query("llm", description="분류기 선택 (llm 또는 rule)"),
+    classifier: str = Query("rule", description="분류기 선택 (llm 또는 rule). ollama 필요 시 llm"),
 ):
     """OSM 기반 주변 산책로/보행로 geometry 조회 (유형 분류 포함)"""
     radius = min(radius, 5000)
